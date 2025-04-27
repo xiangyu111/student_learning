@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Card, Col, Row, Statistic, Space, Progress, Tag, 
-  List, Button, Spin, Empty, Typography, Alert
+  List, Button, Spin, Empty, Typography, Alert, message
 } from 'antd';
 import Table from '../components/layout/Table';
 import { 
@@ -32,142 +32,36 @@ const Dashboard = () => {
   const [recentActivities, setRecentActivities] = useState([]);
   const [pendingApplications, setPendingApplications] = useState([]);
 
-  // 加载统计数据和最近活动
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        // 获取统计数据
-        const statsRes = await axios.get('/api/dashboard/statistics');
-        setStatistics(statsRes.data);
-        
-        // 根据用户角色获取不同数据
-        if (currentUser.role === 'student') {
-          // 获取学生最近活动
-          const activitiesRes = await axios.get('/api/dashboard/recent-activities');
-          setRecentActivities(activitiesRes.data);
-        } else {
-          // 获取教师待审核申请
-          const pendingRes = await axios.get('/api/dashboard/pending-applications');
-          setPendingApplications(pendingRes.data);
-        }
-        
-        setError(null);
-      } catch (err) {
-        console.error('获取仪表盘数据失败:', err);
-        setError('获取数据失败，请稍后再试');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!currentUser) return;
+    
+    fetchDashboardData();
+  }, [currentUser]);
 
-    // 模拟数据，实际应从API获取
-    const simulateData = () => {
-      setLoading(true);
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      let response;
       
-      // 模拟统计数据
       if (currentUser.role === 'student') {
-        setStatistics({
-          totalCredits: currentUser.suketuoCredits + currentUser.lectureCredits + currentUser.volunteerCredits,
-          suketuoCredits: currentUser.suketuoCredits,
-          lectureCredits: currentUser.lectureCredits,
-          volunteerCredits: currentUser.volunteerCredits,
-          activitiesCount: 12,
-          completionRate: 75,
-          pendingApplications: 2,
-          totalActivities: 28
-        });
-        
-        // 模拟学生最近活动
-        setRecentActivities([
-          {
-            id: 1,
-            title: '志愿服务：校园清洁日',
-            type: 'volunteer',
-            status: 'approved',
-            date: '2023-06-15',
-            credits: 2.0
-          },
-          {
-            id: 2,
-            title: '学术讲座：人工智能发展趋势',
-            type: 'lecture',
-            status: 'pending',
-            date: '2023-06-10',
-            credits: 0.5
-          },
-          {
-            id: 3,
-            title: '文体活动：校园歌手大赛',
-            type: 'suketuo',
-            status: 'approved',
-            date: '2023-06-01',
-            credits: 1.5
-          },
-          {
-            id: 4,
-            title: '社团活动：读书会',
-            type: 'suketuo',
-            status: 'rejected',
-            date: '2023-05-25',
-            credits: 0
-          }
-        ]);
-      } else {
-        // 模拟教师/管理员统计数据
-        setStatistics({
-          studentCount: 120,
-          pendingApplicationsCount: 15,
-          activitiesCount: 30,
-          averageCredits: 8.5,
-          suketuoApplications: 25,
-          lectureApplications: 18,
-          volunteerApplications: 12
-        });
-        
-        // 模拟教师待审核申请
-        setPendingApplications([
-          {
-            id: 1,
-            studentName: '张三',
-            studentId: '202101001',
-            activityName: '校园清洁志愿服务',
-            type: 'volunteer',
-            applyDate: '2023-06-18',
-            requestedCredits: 1.5
-          },
-          {
-            id: 2,
-            studentName: '李四',
-            studentId: '202101002',
-            activityName: '人工智能讲座',
-            type: 'lecture',
-            applyDate: '2023-06-17',
-            requestedCredits: 0.5
-          },
-          {
-            id: 3,
-            studentName: '王五',
-            studentId: '202101003',
-            activityName: '校园歌手大赛',
-            type: 'suketuo',
-            applyDate: '2023-06-16',
-            requestedCredits: 1.0
-          }
-        ]);
+        response = await axios.get('/api/dashboard/student');
+        setStatistics(response.data.statistics);
+        setRecentActivities(response.data.recentActivities);
+      } else { // 教师或管理员
+        response = await axios.get('/api/dashboard/teacher');
+        setStatistics(response.data.statistics);
+        setPendingApplications(response.data.pendingApplications);
       }
       
       setError(null);
+    } catch (error) {
+      console.error('获取仪表盘数据失败:', error);
+      setError('获取数据失败，请稍后重试');
+      message.error('获取数据失败');
+    } finally {
       setLoading(false);
-    };
-
-    // 使用模拟数据
-    simulateData();
-    
-    // 实际开发时使用API
-    // fetchDashboardData();
-  }, [currentUser]);
+    }
+  };
 
   // 学生仪表盘
   const renderStudentDashboard = () => {

@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const SuketuoActivity = require('../models/SuketuoActivity');
-const CreditApplication = require('../models/CreditApplication');
+const CreditApplication = require('../models/creditApplication');
 const User = require('../models/User');
 const { Op } = require('sequelize');
 const { getUploadedFilePaths } = require('../utils/fileUpload');
@@ -294,7 +294,7 @@ exports.getMyApplications = async (req, res) => {
     // 查询学分申请记录
     const { count, rows: applications } = await CreditApplication.findAndCountAll({
       where: whereConditions,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit,
       offset,
       include: [
@@ -372,7 +372,7 @@ exports.getPendingApplications = async (req, res) => {
     // 查询学分申请记录
     const { count, rows: applications } = await CreditApplication.findAndCountAll({
       where: whereConditions,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit,
       offset,
       include: [

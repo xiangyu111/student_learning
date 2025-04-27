@@ -25,9 +25,9 @@ const activityRoutes = require('./routes/activities');
 const creditRoutes = require('./routes/credits');
 const suketuoRoutes = require('./routes/suketuo');
 const lectureRoutes = require('./routes/lectures');
-const volunteerRoutes = require('./routes/volunteer');
 const analysisRoutes = require('./routes/analysis');
 const reportRoutes = require('./routes/reports');
+const dashboardRoutes = require('./routes/dashboard');
 
 // 使用路由
 app.use('/api/auth', authRoutes);
@@ -36,9 +36,9 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/suketuo', suketuoRoutes);
 app.use('/api/lectures', lectureRoutes);
-app.use('/api/volunteer', volunteerRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {
@@ -56,7 +56,8 @@ const PORT = process.env.PORT || 5000;
 sequelize.authenticate()
   .then(() => {
     console.log('数据库连接成功');
-    return sequelize.sync({ alter: true });
+    // 使用force: false避免自动修改表结构，因为数据库已手动配置好
+    return sequelize.sync({ force: false });
   })
   .then(() => {
     app.listen(PORT, () => {

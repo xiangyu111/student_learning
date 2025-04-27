@@ -18,7 +18,7 @@ const CreditApplication = sequelize.define('CreditApplication', {
     comment: '申请学生的用户ID'
   },
   creditType: {
-    type: DataTypes.ENUM('suketuo', 'lecture', 'volunteer'),
+    type: DataTypes.ENUM('suketuo', 'lecture', 'labor'),
     allowNull: false,
     comment: '学分类型：素拓学分、讲座学分、劳动学分'
   },
@@ -72,7 +72,7 @@ const CreditApplication = sequelize.define('CreditApplication', {
   serviceHours: {
     type: DataTypes.FLOAT,
     allowNull: true,
-    comment: '志愿服务时长（小时），仅劳动学分适用'
+    comment: '劳动时长（小时），仅劳动学分适用'
   }
 });
 

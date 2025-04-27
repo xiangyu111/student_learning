@@ -11,9 +11,9 @@ import moment from 'moment';
 const { Title } = Typography;
 const { TextArea } = Input;
 
-const VolunteerReview = () => {
+const LaborReview = () => {
   const [loading, setLoading] = useState(false);
-  const [volunteerApplications, setVolunteerApplications] = useState([]);
+  const [laborApplications, setLaborApplications] = useState([]);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [currentApplication, setCurrentApplication] = useState(null);
   const [form] = Form.useForm();
@@ -25,11 +25,11 @@ const VolunteerReview = () => {
   const fetchApplications = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/admin/credits/volunteer');
-      setVolunteerApplications(response.data);
+      const response = await axios.get('http://localhost:5000/api/credits/admin/labor');
+      setLaborApplications(response.data);
     } catch (error) {
-      console.error('获取志愿服务学分申请失败:', error);
-      message.error('获取志愿服务学分申请失败');
+      console.error('获取劳动学分申请失败:', error);
+      message.error('获取劳动学分申请失败');
     } finally {
       setLoading(false);
     }
@@ -51,7 +51,7 @@ const VolunteerReview = () => {
   const handleApprove = async () => {
     try {
       const values = await form.validateFields();
-      await axios.post(`/api/admin/credits/volunteer/${currentApplication.id}/approve`, {
+      await axios.post(`http://localhost:5000/api/credits/admin/labor/${currentApplication.id}/approve`, {
         approvedCredits: values.approvedCredits,
         feedback: values.feedback
       });
@@ -73,7 +73,7 @@ const VolunteerReview = () => {
         return;
       }
       
-      await axios.post(`/api/admin/credits/volunteer/${currentApplication.id}/reject`, {
+      await axios.post(`http://localhost:5000/api/credits/admin/labor/${currentApplication.id}/reject`, {
         feedback: values.feedback
       });
       
@@ -98,24 +98,24 @@ const VolunteerReview = () => {
       key: 'studentId',
     },
     {
-      title: '服务名称',
-      dataIndex: 'serviceName',
-      key: 'serviceName',
+      title: '劳动活动名称',
+      dataIndex: 'name',
+      key: 'name',
       ellipsis: true
     },
     {
-      title: '服务机构',
-      dataIndex: 'organization',
-      key: 'organization'
+      title: '活动地点',
+      dataIndex: 'location',
+      key: 'location'
     },
     {
-      title: '服务时间',
-      dataIndex: 'serviceDate',
-      key: 'serviceDate',
+      title: '日期',
+      dataIndex: 'date',
+      key: 'date',
       render: (text) => moment(text).format('YYYY-MM-DD')
     },
     {
-      title: '服务时长(小时)',
+      title: '时长(小时)',
       dataIndex: 'duration',
       key: 'duration'
     },
@@ -159,11 +159,11 @@ const VolunteerReview = () => {
                   <div>
                     <p><strong>学生姓名:</strong> {record.student.name}</p>
                     <p><strong>学号:</strong> {record.student.studentId}</p>
-                    <p><strong>服务名称:</strong> {record.serviceName}</p>
-                    <p><strong>服务机构:</strong> {record.organization}</p>
-                    <p><strong>服务日期:</strong> {moment(record.serviceDate).format('YYYY-MM-DD')}</p>
-                    <p><strong>服务时长:</strong> {record.duration}小时</p>
-                    <p><strong>服务描述:</strong> {record.description}</p>
+                    <p><strong>活动名称:</strong> {record.name}</p>
+                    <p><strong>活动地点:</strong> {record.location}</p>
+                    <p><strong>活动日期:</strong> {moment(record.date).format('YYYY-MM-DD')}</p>
+                    <p><strong>劳动时长:</strong> {record.duration}小时</p>
+                    <p><strong>劳动描述:</strong> {record.description}</p>
                     <p><strong>申请学分:</strong> {record.requestedCredits}</p>
                     <p><strong>获得学分:</strong> {record.approvedCredits || '-'}</p>
                     <p><strong>状态:</strong> {record.status}</p>
@@ -205,42 +205,60 @@ const VolunteerReview = () => {
   const renderReviewHeader = () => (
     <Row gutter={16} align="middle" style={{ marginBottom: 16 }}>
       <Col span={12}>
-        <Title level={4}>志愿服务学分审核</Title>
+        <Title level={4}>劳动学分审核</Title>
       </Col>
       <Col span={12} style={{ textAlign: 'right' }}>
-        <Space>
-          <Button onClick={fetchApplications}>刷新</Button>
-        </Space>
+        <Button type="primary" onClick={fetchApplications}>
+          刷新
+        </Button>
       </Col>
     </Row>
   );
   
   const renderReviewModal = () => (
     <Modal
-      title="审核志愿服务学分申请"
+      title="审核劳动学分申请"
       open={reviewModalVisible}
       onCancel={handleReviewCancel}
       footer={[
-        <Button key="cancel" onClick={handleReviewCancel}>
+        <Button key="back" onClick={handleReviewCancel}>
           取消
         </Button>,
-        <Button key="reject" danger icon={<CloseOutlined />} onClick={handleReject}>
+        <Button 
+          key="reject" 
+          type="primary" 
+          danger
+          icon={<CloseOutlined />}
+          onClick={handleReject}
+        >
           拒绝
         </Button>,
-        <Button key="approve" type="primary" icon={<CheckOutlined />} onClick={handleApprove}>
+        <Button 
+          key="approve" 
+          type="primary"
+          icon={<CheckOutlined />}
+          onClick={handleApprove}
+        >
           通过
-        </Button>
+        </Button>,
       ]}
       width={600}
     >
       {currentApplication && (
-        <>
-          <div style={{ marginBottom: 24 }}>
-            <p><strong>学生:</strong> {currentApplication.student.name} ({currentApplication.student.studentId})</p>
-            <p><strong>服务名称:</strong> {currentApplication.serviceName}</p>
-            <p><strong>服务机构:</strong> {currentApplication.organization}</p>
-            <p><strong>服务时长:</strong> {currentApplication.duration}小时</p>
-            <p><strong>申请学分:</strong> {currentApplication.requestedCredits}</p>
+        <Form
+          form={form}
+          layout="vertical"
+        >
+          <p><strong>学生姓名:</strong> {currentApplication.student.name}</p>
+          <p><strong>学号:</strong> {currentApplication.student.studentId}</p>
+          <p><strong>活动名称:</strong> {currentApplication.name}</p>
+          <p><strong>活动地点:</strong> {currentApplication.location}</p>
+          <p><strong>活动日期:</strong> {moment(currentApplication.date).format('YYYY-MM-DD')}</p>
+          <p><strong>劳动时长:</strong> {currentApplication.duration}小时</p>
+          <p><strong>活动描述:</strong> {currentApplication.description}</p>
+          <p><strong>申请学分:</strong> {currentApplication.requestedCredits}</p>
+          
+          {currentApplication.certificateUrl && (
             <p>
               <strong>证明材料:</strong> 
               <Button 
@@ -250,45 +268,41 @@ const VolunteerReview = () => {
                 查看证明
               </Button>
             </p>
-          </div>
+          )}
           
-          <Form
-            form={form}
-            layout="vertical"
+          <Form.Item
+            name="approvedCredits"
+            label="批准学分"
+            rules={[{ required: true, message: '请输入批准学分' }]}
           >
-            <Form.Item
-              name="approvedCredits"
-              label="批准学分"
-              rules={[{ required: true, message: '请输入批准学分' }]}
-            >
-              <InputNumber
-                min={0}
-                step={0.1}
-                style={{ width: '100%' }}
-                placeholder="批准学分数"
-              />
-            </Form.Item>
-            
-            <Form.Item
-              name="feedback"
-              label="审核意见"
-            >
-              <TextArea rows={4} placeholder="审核意见或反馈" />
-            </Form.Item>
-          </Form>
-        </>
+            <InputNumber
+              min={0.1}
+              max={currentApplication.requestedCredits}
+              step={0.1}
+              style={{ width: '100%' }}
+            />
+          </Form.Item>
+          
+          <Form.Item
+            name="feedback"
+            label="审核意见"
+            rules={[{ required: false, message: '请输入审核意见' }]}
+          >
+            <TextArea rows={4} placeholder="请输入审核意见" />
+          </Form.Item>
+        </Form>
       )}
     </Modal>
   );
   
   return (
-    <div className="volunteer-review-container">
+    <div className="labor-review-container">
       {renderReviewHeader()}
       
       <Card>
         <Table
           columns={columns}
-          dataSource={volunteerApplications}
+          dataSource={laborApplications}
           rowKey="id"
           loading={loading}
           pagination={{ pageSize: 10 }}
@@ -300,4 +314,4 @@ const VolunteerReview = () => {
   );
 };
 
-export default VolunteerReview; 
+export default LaborReview; 

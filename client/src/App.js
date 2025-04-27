@@ -20,7 +20,7 @@ import LearningActivities from './pages/learning/LearningActivities';
 // 学分管理页面
 import SuketuoCredits from './pages/credits/SuketuoCredits';
 import LectureCredits from './pages/credits/LectureCredits';
-import VolunteerCredits from './pages/credits/VolunteerCredits';
+import LaborCredits from './pages/credits/LaborCredits';
 
 // 学情分析页面
 import Analysis from './pages/analysis/Analysis';
@@ -30,7 +30,7 @@ import StudentsManage from './pages/admin/StudentsManage';
 import ActivitiesManage from './pages/admin/ActivitiesManage';
 import SuketuoReview from './pages/admin/SuketuoReview';
 import LectureReview from './pages/admin/LectureReview';
-import VolunteerReview from './pages/admin/VolunteerReview';
+import LaborReview from './pages/admin/LaborReview';
 import ClassAnalysis from './pages/admin/ClassAnalysis';
 
 // 权限保护的路由组件
@@ -120,10 +120,10 @@ function App() {
               } requiredRole="student" />
             } />
             
-            <Route path="/credits/volunteer" element={
+            <Route path="/credits/labor" element={
               <ProtectedRoute element={
                 <AppLayout>
-                  <VolunteerCredits />
+                  <LaborCredits />
                 </AppLayout>
               } requiredRole="student" />
             } />
@@ -169,10 +169,10 @@ function App() {
               } requiredRole="teacher" />
             } />
             
-            <Route path="/credits-review/volunteer" element={
+            <Route path="/credits-review/labor" element={
               <ProtectedRoute element={
                 <AppLayout>
-                  <VolunteerReview />
+                  <LaborReview />
                 </AppLayout>
               } requiredRole="teacher" />
             } />

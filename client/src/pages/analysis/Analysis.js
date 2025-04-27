@@ -17,7 +17,13 @@ const Analysis = () => {
     moment()
   ]);
   const [analysisData, setAnalysisData] = useState({
-    creditTrend: [],
+    creditTrend: {
+      months: [],
+      suketuo: [],
+      lecture: [],
+      volunteer: [],
+      total: []
+    },
     activityParticipation: [],
     creditDistribution: {
       suketuo: 0,
@@ -36,7 +42,6 @@ const Analysis = () => {
     
     setLoading(true);
     try {
-      // 确保使用正确的端口号 5000，不是 3000
       const response = await axios.get('/api/analysis', {
         params: {
           startDate: dateRange[0]?.format('YYYY-MM-DD'),
@@ -46,86 +51,13 @@ const Analysis = () => {
       
       if (response.data) {
         setAnalysisData(response.data);
-      } else {
-        // 使用模拟数据
-        setAnalysisData({
-          creditTrend: generateMockCreditTrend(),
-          activityParticipation: generateMockActivityParticipation(),
-          creditDistribution: {
-            suketuo: 8.5,
-            lecture: 4.0,
-            volunteer: 2.5
-          },
-          recentActivities: generateMockRecentActivities()
-        });
       }
     } catch (error) {
       console.error('获取分析数据失败:', error);
       message.error('获取分析数据失败');
-      // 使用模拟数据以展示UI
-      setAnalysisData({
-        creditTrend: generateMockCreditTrend(),
-        activityParticipation: generateMockActivityParticipation(),
-        creditDistribution: {
-          suketuo: 8.5,
-          lecture: 4.0,
-          volunteer: 2.5
-        },
-        recentActivities: generateMockRecentActivities()
-      });
     } finally {
       setLoading(false);
     }
-  };
-
-  // 模拟数据生成函数
-  const generateMockCreditTrend = () => {
-    const months = [];
-    const suketuo = [];
-    const lecture = [];
-    const volunteer = [];
-    const total = [];
-
-    const currentDate = moment();
-    for (let i = 5; i >= 0; i--) {
-      const month = moment(currentDate).subtract(i, 'months').format('YYYY-MM');
-      months.push(month);
-      
-      const suketuoValue = parseFloat((Math.random() * 2).toFixed(1));
-      const lectureValue = parseFloat((Math.random() * 1.5).toFixed(1));
-      const volunteerValue = parseFloat((Math.random() * 1).toFixed(1));
-      
-      suketuo.push(suketuoValue);
-      lecture.push(lectureValue);
-      volunteer.push(volunteerValue);
-      total.push(parseFloat((suketuoValue + lectureValue + volunteerValue).toFixed(1)));
-    }
-
-    return { months, suketuo, lecture, volunteer, total };
-  };
-
-  const generateMockActivityParticipation = () => {
-    return [
-      { name: '素拓活动', value: 15 },
-      { name: '讲座', value: 8 },
-      { name: '志愿服务', value: 5 },
-      { name: '竞赛', value: 3 }
-    ];
-  };
-
-  const generateMockRecentActivities = () => {
-    const activities = [];
-    for (let i = 1; i <= 5; i++) {
-      activities.push({
-        id: i,
-        title: `活动${i}`,
-        type: i % 3 === 0 ? '讲座' : i % 3 === 1 ? '素拓' : '志愿服务',
-        date: moment().subtract(i * 5, 'days').format('YYYY-MM-DD'),
-        credits: parseFloat((Math.random() * 2 + 0.5).toFixed(1)),
-        status: i === 1 ? '进行中' : '已完成'
-      });
-    }
-    return activities;
   };
 
   // 学分趋势图配置

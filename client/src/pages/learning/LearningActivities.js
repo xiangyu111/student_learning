@@ -41,8 +41,26 @@ const LearningActivities = () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/activities');
-      setActivities(response.data || []);
-      setFilteredActivities(response.data || []);
+      console.log('API响应数据:', response);
+      console.log('响应数据类型:', typeof response.data);
+      console.log('响应数据内容:', JSON.stringify(response.data, null, 2));
+      
+      // 处理返回的数据格式
+      let activitiesData = [];
+      if (response.data && response.data.activities && Array.isArray(response.data.activities)) {
+        // 如果数据在activities字段中
+        activitiesData = response.data.activities;
+      } else if (Array.isArray(response.data)) {
+        // 如果直接返回数组
+        activitiesData = response.data;
+      } else if (response.data) {
+        // 尝试处理其他可能的情况
+        console.log('API返回了意外的数据格式');
+      }
+      
+      console.log('处理后的活动数据:', activitiesData);
+      setActivities(activitiesData);
+      setFilteredActivities(activitiesData);
     } catch (error) {
       console.error('获取活动列表失败:', error);
       message.error('获取活动列表失败');
@@ -56,6 +74,7 @@ const LearningActivities = () => {
   const filterActivities = () => {
     // 确保activities是数组
     if (!Array.isArray(activities)) {
+      console.error('活动数据不是数组:', activities);
       setFilteredActivities([]);
       return;
     }

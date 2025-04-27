@@ -25,7 +25,7 @@ const LectureReview = () => {
   const fetchApplications = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/admin/credits/lecture');
+      const response = await axios.get('http://localhost:5000/api/credits/admin/lecture');
       setLectureApplications(response.data);
     } catch (error) {
       console.error('获取讲座学分申请失败:', error);
@@ -51,7 +51,7 @@ const LectureReview = () => {
   const handleApprove = async () => {
     try {
       const values = await form.validateFields();
-      await axios.post(`/api/admin/credits/lecture/${currentApplication.id}/approve`, {
+      await axios.post(`http://localhost:5000/api/credits/admin/lecture/${currentApplication.id}/approve`, {
         approvedCredits: values.approvedCredits,
         feedback: values.feedback
       });
@@ -73,7 +73,7 @@ const LectureReview = () => {
         return;
       }
       
-      await axios.post(`/api/admin/credits/lecture/${currentApplication.id}/reject`, {
+      await axios.post(`http://localhost:5000/api/credits/admin/lecture/${currentApplication.id}/reject`, {
         feedback: values.feedback
       });
       

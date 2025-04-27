@@ -91,4 +91,20 @@ LearningActivity.belongsTo(User, {
   as: 'student'
 });
 
+// 假设LearningActivity也需要关联到Activity模型
+// 需要在server.js中在初始化所有模型后设置此关联
+// 添加注释以提供指导
+/* 
+ * 注意：如果需要在LearningActivity和Activity之间建立关联
+ * 请在server.js或单独的关联文件中添加如下代码:
+ * 
+ * const { Activity } = require('./models/Activity');
+ * const LearningActivity = require('./models/LearningActivity');
+ * 
+ * LearningActivity.belongsTo(Activity, {
+ *   foreignKey: 'activityId',  // 确保LearningActivity模型中有此字段
+ *   as: 'Activity'
+ * });
+ */
+
 module.exports = LearningActivity; 

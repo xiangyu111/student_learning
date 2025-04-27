@@ -30,7 +30,6 @@ const User = sequelize.define('User', {
   email: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
     validate: {
       isEmail: true
     }
@@ -42,13 +41,11 @@ const User = sequelize.define('User', {
   },
   studentId: {
     type: DataTypes.STRING(20),
-    allowNull: true,
-    unique: true
+    allowNull: true
   },
   teacherId: {
     type: DataTypes.STRING(20),
-    allowNull: true,
-    unique: true
+    allowNull: true
   },
   department: {
     type: DataTypes.STRING(100),
@@ -84,7 +81,7 @@ const User = sequelize.define('User', {
     allowNull: false,
     defaultValue: 0
   },
-  volunteerCredits: {
+  laborCredits: {
     type: DataTypes.FLOAT,
     allowNull: false,
     defaultValue: 0

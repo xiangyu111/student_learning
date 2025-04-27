@@ -66,8 +66,8 @@ const AppLayout = ({ children }) => {
             label: <Link to="/credits/lecture">讲座学分</Link>,
           },
           {
-            key: '/credits/volunteer',
-            label: <Link to="/credits/volunteer">劳动学分</Link>,
+            key: '/credits/labor',
+            label: <Link to="/credits/labor">劳动学分</Link>,
           },
         ],
       },
@@ -119,8 +119,8 @@ const AppLayout = ({ children }) => {
             label: <Link to="/credits-review/lecture">讲座学分审核</Link>,
           },
           {
-            key: '/credits-review/volunteer',
-            label: <Link to="/credits-review/volunteer">劳动学分审核</Link>,
+            key: '/credits-review/labor',
+            label: <Link to="/credits-review/labor">劳动学分审核</Link>,
           },
         ],
       },

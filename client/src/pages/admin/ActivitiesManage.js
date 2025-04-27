@@ -36,6 +36,13 @@ const ActivitiesManage = () => {
   }, []);
 
   const filterActivities = useCallback(() => {
+    // 确保activities是数组
+    if (!Array.isArray(activities)) {
+      console.error('活动数据不是数组:', activities);
+      setFilteredActivities([]);
+      return;
+    }
+    
     let results = [...activities];
     
     // 按标题或描述搜索
@@ -77,11 +84,15 @@ const ActivitiesManage = () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/activities');
-      setActivities(response.data);
-      setFilteredActivities(response.data);
+      const data = response.data || [];
+      // 确保设置的是数组
+      setActivities(Array.isArray(data) ? data : []);
+      setFilteredActivities(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('获取活动列表失败:', error);
       message.error('获取活动列表失败');
+      setActivities([]);
+      setFilteredActivities([]);
     } finally {
       setLoading(false);
     }
@@ -168,26 +179,35 @@ const ActivitiesManage = () => {
     try {
       const values = await form.validateFields();
       
-      // 转换日期格式
+      // 转换日期格式，使用ISO格式确保时区正确
       const formattedValues = {
         ...values,
-        startDate: values.startDate.format(),
-        endDate: values.endDate.format()
+        startDate: values.startDate ? values.startDate.toISOString() : undefined,
+        endDate: values.endDate ? values.endDate.toISOString() : undefined
       };
       
-      if (isEditing && currentActivity) {
-        await axios.put(`/api/activities/${currentActivity.id}`, formattedValues);
-        message.success('更新成功');
-      } else {
-        await axios.post('/api/activities', formattedValues);
-        message.success('添加成功');
-      }
+      console.log('表单数据:', formattedValues);
       
-      setModalVisible(false);
-      fetchActivities();
-    } catch (error) {
-      console.error('操作失败:', error);
-      message.error('操作失败: ' + (error.response?.data?.message || error.message));
+      let response;
+      try {
+        if (isEditing && currentActivity) {
+          response = await axios.put(`/api/activities/${currentActivity.id}`, formattedValues);
+          message.success('更新成功');
+        } else {
+          response = await axios.post('/api/activities', formattedValues);
+          message.success('添加成功');
+        }
+        
+        setModalVisible(false);
+        fetchActivities();
+      } catch (apiError) {
+        console.error('API调用失败:', apiError);
+        const errorMsg = apiError.response?.data?.message || apiError.message || '操作失败';
+        message.error(`操作失败: ${errorMsg}`);
+      }
+    } catch (validationError) {
+      console.error('表单验证失败:', validationError);
+      // 表单验证错误已由antd处理，不需额外处理
     }
   };
 
@@ -434,11 +454,22 @@ const ActivitiesManage = () => {
                 { required: true, message: '请选择结束时间' },
                 ({ getFieldValue }) => ({
                   validator(_, value) {
-                    if (!value || !getFieldValue('startDate') || 
-                        moment(value).isAfter(getFieldValue('startDate'))) {
+                    if (!value || !getFieldValue('startDate')) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(new Error('结束时间必须晚于开始时间'));
+                    
+                    const startDate = getFieldValue('startDate');
+                    const endDate = value;
+                    
+                    // 获取时间戳进行比较，确保结束时间不早于开始时间
+                    const startTimestamp = startDate.valueOf();
+                    const endTimestamp = endDate.valueOf();
+                    
+                    if (endTimestamp >= startTimestamp) {
+                      return Promise.resolve();
+                    }
+                    
+                    return Promise.reject(new Error('结束时间必须晚于或等于开始时间'));
                   },
                 })
               ]}

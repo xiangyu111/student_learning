@@ -28,11 +28,42 @@ const SuketuoCredits = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await axios.get('/api/credits/suketuo');
+      console.log('开始获取素拓学分数据...');
+      const response = await axios.get('http://localhost:5000/api/credits/suketuo');
+      console.log('素拓学分数据接收成功:', response.data);
       setSuketuoCredits(response.data);
     } catch (error) {
       console.error('获取素拓学分记录失败:', error);
-      message.error('获取素拓学分记录失败');
+      message.error('获取素拓学分记录失败，显示模拟数据');
+      
+      // 生成一些前端模拟数据
+      const mockData = [];
+      const statuses = ['待审核', '已通过', '已拒绝'];
+      const types = ['创新创业', '文体活动', '社会实践', '学生工作'];
+      const levels = ['国家级', '省级', '市级', '校级', '院级'];
+      
+      for (let i = 0; i < 8; i++) {
+        const type = types[Math.floor(Math.random() * types.length)];
+        const level = levels[Math.floor(Math.random() * levels.length)];
+        const status = statuses[Math.floor(Math.random() * statuses.length)];
+        const requestedCredits = parseFloat((Math.random() * 3 + 0.5).toFixed(1));
+        
+        mockData.push({
+          id: i + 1,
+          name: `${type}活动${i + 1}`,
+          type: type,
+          level: level,
+          date: new Date(Date.now() - Math.floor(Math.random() * 90 * 24 * 60 * 60 * 1000)),
+          description: `参加了${level}${type}活动，表现良好`,
+          requestedCredits: requestedCredits,
+          approvedCredits: status === '已通过' ? parseFloat((requestedCredits * 0.8).toFixed(1)) : null,
+          status: status,
+          feedback: status === '已拒绝' ? '证明材料不足，请补充更多相关证明' : '',
+          certificateUrl: null
+        });
+      }
+      
+      setSuketuoCredits(mockData);
     } finally {
       setLoading(false);
     }
@@ -71,7 +102,7 @@ const SuketuoCredits = () => {
       }
       
       // 发送请求到正确的端点
-      await axios.post('/api/credits/suketuo/apply', formData, {
+      await axios.post('http://localhost:5000/api/credits/suketuo/apply', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -228,7 +259,6 @@ const SuketuoCredits = () => {
               rules={[{ required: true, message: '请选择活动类型' }]}
             >
               <Select placeholder="选择活动类型">
-                <Option value="学科竞赛">学科竞赛</Option>
                 <Option value="创新创业">创新创业</Option>
                 <Option value="文体活动">文体活动</Option>
                 <Option value="社会实践">社会实践</Option>
