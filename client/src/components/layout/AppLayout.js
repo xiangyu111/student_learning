@@ -88,8 +88,8 @@ const AppLayout = ({ children }) => {
       },
       {
         key: '/reports',
-        icon: <FileTextOutlined />,
-        label: <Link to="/reports">报表生成</Link>,
+        icon: <BarChartOutlined />,
+        label: <Link to="/reports">学习报表</Link>,
       },
       {
         key: '/discussions',
@@ -147,12 +147,7 @@ const AppLayout = ({ children }) => {
         key: '/system',
         icon: <SettingOutlined />,
         label: <Link to="/system">系统管理</Link>,
-      },
-      {
-        key: '/recommendation',
-        icon: <BulbOutlined />,
-        label: <Link to="/recommendation">推荐系统设置</Link>,
-      },
+      }
     ];
 
     // 根据用户角色返回相应菜单

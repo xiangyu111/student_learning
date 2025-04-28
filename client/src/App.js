@@ -27,6 +27,9 @@ import LaborCredits from './pages/credits/LaborCredits';
 // 学情分析页面
 import Analysis from './pages/analysis/Analysis';
 
+// 报表页面
+import Reports from './pages/reports';
+
 // 管理员或教师页面
 import StudentsManage from './pages/admin/StudentsManage';
 import ActivitiesManage from './pages/admin/ActivitiesManage';
@@ -34,6 +37,9 @@ import SuketuoReview from './pages/admin/SuketuoReview';
 import LectureReview from './pages/admin/LectureReview';
 import LaborReview from './pages/admin/LaborReview';
 import ClassAnalysis from './pages/admin/ClassAnalysis';
+
+// 系统管理页面
+import SystemManagement from './pages/admin/SystemManagement';
 
 // 讨论交流页面
 import { DiscussionList, DiscussionDetail, CreateDiscussion } from './pages/discussions';
@@ -96,6 +102,15 @@ function App() {
               <ProtectedRoute element={
                 <AppLayout>
                   <Settings />
+                </AppLayout>
+              } />
+            } />
+            
+            {/* 报表路由 */}
+            <Route path="/reports" element={
+              <ProtectedRoute element={
+                <AppLayout>
+                  <Reports />
                 </AppLayout>
               } />
             } />
@@ -229,6 +244,15 @@ function App() {
                   <ClassAnalysis />
                 </AppLayout>
               } requiredRole="teacher" />
+            } />
+            
+            {/* 管理员专属路由 */}
+            <Route path="/system" element={
+              <ProtectedRoute element={
+                <AppLayout>
+                  <SystemManagement />
+                </AppLayout>
+              } requiredRole="admin" />
             } />
             
             {/* 404页面 */}

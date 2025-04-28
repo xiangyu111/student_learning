@@ -30,6 +30,7 @@ const reportRoutes = require('./routes/reports');
 const dashboardRoutes = require('./routes/dashboard');
 const progressRoutes = require('./routes/progress');
 const discussionRoutes = require('./routes/discussions');
+const systemRoutes = require('./routes/system');
 
 // 使用路由
 app.use('/api/auth', authRoutes);
@@ -43,6 +44,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/discussions', discussionRoutes);
+app.use('/api/system', systemRoutes);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {
