@@ -33,47 +33,11 @@ const LaborCredits = () => {
       setLaborCredits(response.data);
     } catch (error) {
       console.error('获取劳动学分记录失败:', error);
-      message.error('获取劳动学分记录失败，将显示模拟数据');
-      
-      // 生成模拟数据
-      const mockData = generateMockLaborCredits();
-      console.log('使用模拟数据:', mockData);
-      setLaborCredits(mockData);
+      message.error('获取劳动学分记录失败');
+      setLaborCredits([]);
     } finally {
       setLoading(false);
     }
-  };
-  
-  // 生成模拟劳动学分数据
-  const generateMockLaborCredits = () => {
-    const statuses = ['待审核', '已通过', '已拒绝'];
-    const activities = ['校园清洁', '社区服务', '学院助理', '图书馆志愿者', '校园绿化', '学生活动支持', '实验室维护', '教室整理'];
-    const locations = ['主校区', '东校区', '西校区', '南校区', '北校区', '实验楼', '图书馆', '社区中心'];
-    
-    const records = [];
-    for (let i = 0; i < 8; i++) {
-      const requestedCredits = parseFloat((Math.random() * 2 + 0.5).toFixed(1));
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const duration = Math.floor(Math.random() * 5) + 1;
-      const activityName = activities[Math.floor(Math.random() * activities.length)];
-      const location = locations[Math.floor(Math.random() * locations.length)];
-      
-      records.push({
-        id: 2000 + i,
-        name: activityName,
-        location: location,
-        date: new Date(Date.now() - Math.floor(Math.random() * 60 * 24 * 60 * 60 * 1000)),
-        duration: duration.toString(),
-        description: `参加了${location}的${activityName}劳动活动，累计${duration}小时。`,
-        requestedCredits: requestedCredits,
-        approvedCredits: status === '已通过' ? parseFloat((requestedCredits * 0.9).toFixed(1)) : null,
-        status: status,
-        feedback: status === '已拒绝' ? '证明材料不足，请补充更多相关证明' : '',
-        certificateUrl: `/uploads/certificates/mock-labor-${i+1}.pdf`
-      });
-    }
-    
-    return records;
   };
   
   const showAddModal = () => {

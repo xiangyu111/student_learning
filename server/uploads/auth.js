@@ -1,54 +1,68 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// 验证用户Token
+/**
+ * 认证中间件 - 验证用户是否已登录
+ */
 exports.auth = async (req, res, next) => {
   try {
-    // 获取请求头中的token
+    // 从请求头获取token
     const token = req.header('x-auth-token');
 
     // 检查是否有token
     if (!token) {
-      console.log('警告: 请求没有提供token，设置默认用户');
-      // 临时设置一个模拟用户，方便测试
-      req.user = {
-        id: 1001,
-        name: '测试用户',
-        studentId: '202100001',
-        role: 'student',
-        suketuoCredits: 2.5,
-        lectureCredits: 1.5,
-        volunteerCredits: 1.0
-      };
-      return next();
+      return res.status(401).json({ message: '无访问权限，请先登录' });
     }
 
     // 验证token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
     
-    // 查找用户
+    // 获取用户信息
     const user = await User.findByPk(decoded.id);
     
     if (!user) {
-      return res.status(401).json({ message: '用户不存在' });
+      return res.status(401).json({ message: '用户不存在或已被删除' });
     }
     
-    // 将用户信息添加到请求对象
+    // 将用户信息添加到请求对象中
     req.user = user;
     next();
-  } catch (error) {
-    console.log('验证token失败，设置默认用户:', error.message);
-    // 临时设置一个模拟用户，方便测试
-    req.user = {
-      id: 1001,
-      name: '测试用户',
-      studentId: '202100001',
-      role: 'student',
-      suketuoCredits: 2.5,
-      lectureCredits: 1.5,
-      volunteerCredits: 1.0
-    };
+  } catch (err) {
+    console.error('认证失败:', err);
+    return res.status(401).json({ message: '认证失败，请重新登录' });
+  }
+};
+
+/**
+ * 管理员权限中间件 - 检查用户是否有管理员权限
+ */
+exports.admin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
     next();
+  } else {
+    return res.status(403).json({ message: '没有管理员权限' });
+  }
+};
+
+/**
+ * 教师权限中间件 - 检查用户是否有教师权限
+ */
+exports.teacher = (req, res, next) => {
+  if (req.user && (req.user.role === 'teacher' || req.user.role === 'admin')) {
+    next();
+  } else {
+    return res.status(403).json({ message: '没有教师权限' });
+  }
+};
+
+/**
+ * 学生权限中间件 - 检查用户是否有学生权限
+ */
+exports.student = (req, res, next) => {
+  if (req.user && req.user.role === 'student') {
+    next();
+  } else {
+    return res.status(403).json({ message: '没有学生权限' });
   }
 };
 

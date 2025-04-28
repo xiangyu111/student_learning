@@ -15,26 +15,31 @@ const LearningActivity = sequelize.define('LearningActivity', {
       model: User,
       key: 'id'
     },
+    field: 'user_id',
     comment: '学生的用户ID'
   },
   activityName: {
     type: DataTypes.STRING(100),
     allowNull: false,
+    field: 'activity_name',
     comment: '活动名称'
   },
   activityType: {
     type: DataTypes.STRING(50),
     allowNull: false,
+    field: 'activity_type',
     comment: '活动类型，如自主学习、小组讨论、实践活动等'
   },
   startTime: {
     type: DataTypes.DATE,
     allowNull: false,
+    field: 'start_time',
     comment: '开始时间'
   },
   endTime: {
     type: DataTypes.DATE,
     allowNull: false,
+    field: 'end_time',
     comment: '结束时间'
   },
   duration: {
@@ -50,6 +55,7 @@ const LearningActivity = sequelize.define('LearningActivity', {
   participationType: {
     type: DataTypes.STRING(50),
     allowNull: true,
+    field: 'participation_type',
     comment: '参与方式，如线上、线下、混合等'
   },
   content: {
@@ -76,18 +82,32 @@ const LearningActivity = sequelize.define('LearningActivity', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false,
+    field: 'is_public',
     comment: '是否公开'
   },
   tags: {
     type: DataTypes.STRING(200),
     allowNull: true,
     comment: '标签，多个用英文逗号分隔'
+  },
+  // 由于数据库使用下划线命名，需要显式定义created_at和updated_at字段
+  createdAt: {
+    type: DataTypes.DATE,
+    field: 'created_at'
+  },
+  updatedAt: {
+    type: DataTypes.DATE,
+    field: 'updated_at'
   }
+}, {
+  tableName: 'learning_activities',
+  timestamps: true,
+  underscored: true // 使用下划线命名法
 });
 
 // 建立与User表的关联
 LearningActivity.belongsTo(User, { 
-  foreignKey: 'userId',
+  foreignKey: 'user_id',
   as: 'student'
 });
 
@@ -102,7 +122,7 @@ LearningActivity.belongsTo(User, {
  * const LearningActivity = require('./models/LearningActivity');
  * 
  * LearningActivity.belongsTo(Activity, {
- *   foreignKey: 'activityId',  // 确保LearningActivity模型中有此字段
+ *   foreignKey: 'activity_id',  // 确保LearningActivity模型中有此字段
  *   as: 'Activity'
  * });
  */

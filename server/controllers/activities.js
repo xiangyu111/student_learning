@@ -358,18 +358,23 @@ exports.cancelRegistration = async (req, res) => {
   try {
     const { id } = req.params;
     
+    console.log(`尝试取消活动ID ${id} 的报名，用户ID ${req.user.id}`);
+    
     // 查找活动
     const activity = await Activity.findByPk(id);
     if (!activity) {
+      console.log('找不到活动');
       return res.status(404).json({ message: '活动不存在' });
     }
     
     // 检查活动状态
     if (activity.status === '已结束') {
+      console.log('活动已结束，无法取消报名');
       return res.status(400).json({ message: '活动已结束，无法取消报名' });
     }
     
     // 查找报名记录
+    console.log(`查找报名记录: activity_id=${id}, user_id=${req.user.id}`);
     const registration = await ActivityRegistration.findOne({
       where: {
         activity_id: id,
@@ -377,27 +382,35 @@ exports.cancelRegistration = async (req, res) => {
       }
     });
     
+    console.log('查找到的报名记录:', registration);
+    
     if (!registration) {
+      console.log('用户未报名该活动');
       return res.status(404).json({ message: '您未报名该活动' });
     }
     
     if (registration.status === '已取消') {
+      console.log('用户已取消报名该活动');
       return res.status(400).json({ message: '您已取消报名该活动' });
     }
     
     // 更新报名状态
+    console.log('正在更新报名状态为已取消');
     await registration.update({
       status: '已取消'
     });
     
     // 更新活动参与人数
+    console.log('正在更新活动参与人数');
     await activity.update({
       currentParticipants: Math.max(0, activity.currentParticipants - 1)
     });
     
+    console.log('取消报名成功');
     res.status(200).json({ message: '已成功取消报名' });
   } catch (error) {
     console.error('取消活动报名失败:', error);
+    console.error('错误详情:', error.stack);
     res.status(500).json({ message: '取消活动报名失败', error: error.message });
   }
 };

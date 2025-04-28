@@ -26,6 +26,8 @@ const LearningActivities = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [currentActivity, setCurrentActivity] = useState(null);
   const [registering, setRegistering] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [showMyRegistered, setShowMyRegistered] = useState(false);
 
   // 获取活动列表
   useEffect(() => {
@@ -35,7 +37,7 @@ const LearningActivities = () => {
   // 监听筛选条件变化
   useEffect(() => {
     filterActivities();
-  }, [searchText, dateRange, statusFilter, activityType, activities]);
+  }, [searchText, dateRange, statusFilter, activityType, showMyRegistered, activities]);
 
   const fetchActivities = async () => {
     setLoading(true);
@@ -107,6 +109,11 @@ const LearningActivities = () => {
       results = results.filter(activity => activity.type === activityType);
     }
 
+    // 按已报名筛选
+    if (showMyRegistered) {
+      results = results.filter(activity => activity.isRegistered);
+    }
+
     setFilteredActivities(results);
   };
 
@@ -126,9 +133,32 @@ const LearningActivities = () => {
     setActivityType(value);
   };
 
-  const showActivityDetail = (activity) => {
-    setCurrentActivity(activity);
+  const handleMyRegisteredChange = (checked) => {
+    setShowMyRegistered(checked);
+  };
+
+  const showActivityDetail = async (activity) => {
+    // 先显示模态框，设置初始状态
     setDetailModalVisible(true);
+    setCurrentActivity({
+      ...activity,
+      isRegistered: false // 默认设置为未报名，等待API返回实际状态
+    });
+    setLoadingDetail(true);
+    
+    try {
+      // 尝试获取最新的活动详情
+      const response = await axios.get(`/api/activities/${activity.id}`);
+      if (response.data) {
+        console.log('获取到的活动详情:', response.data);
+        setCurrentActivity(response.data);
+      }
+    } catch (error) {
+      console.error('获取活动详情失败:', error);
+      message.error('获取活动详情失败，显示可能不是最新数据');
+    } finally {
+      setLoadingDetail(false);
+    }
   };
 
   const handleRegister = async () => {
@@ -136,13 +166,85 @@ const LearningActivities = () => {
 
     setRegistering(true);
     try {
-      await axios.post(`/api/activities/${currentActivity.id}/register`);
-      message.success('报名成功');
-      setDetailModalVisible(false);
-      fetchActivities(); // 刷新活动列表
+      const response = await axios.post(`/api/activities/${currentActivity.id}/register`);
+      
+      if (response.status === 200) {
+        message.success('报名成功');
+        
+        // 更新当前活动的报名状态
+        setCurrentActivity({
+          ...currentActivity,
+          isRegistered: true,
+          currentParticipants: currentActivity.currentParticipants + 1
+        });
+        
+        // 更新活动列表
+        fetchActivities(); 
+      }
     } catch (error) {
       console.error('报名失败:', error);
-      message.error('报名失败: ' + (error.response?.data?.message || '未知错误'));
+      const errorMsg = error.response?.data?.message || '未知错误';
+      
+      // 特殊处理：如果错误消息包含"已报名"，也更新UI状态
+      if (errorMsg.includes('已报名该活动')) {
+        message.info('您已报名该活动');
+        
+        // 更新当前活动的报名状态
+        setCurrentActivity({
+          ...currentActivity,
+          isRegistered: true
+        });
+        
+        // 更新活动列表
+        fetchActivities();
+      } else {
+        message.error('报名失败: ' + errorMsg);
+      }
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleCancelRegistration = async () => {
+    if (!currentActivity) return;
+
+    setRegistering(true);
+    try {
+      const response = await axios.post(`/api/activities/${currentActivity.id}/cancel`);
+      
+      if (response.status === 200) {
+        message.success('已成功取消报名');
+        
+        // 更新当前活动的报名状态
+        setCurrentActivity({
+          ...currentActivity,
+          isRegistered: false,
+          currentParticipants: Math.max(0, currentActivity.currentParticipants - 1)
+        });
+        
+        // 更新活动列表
+        fetchActivities(); 
+      }
+    } catch (error) {
+      console.error('取消报名失败:', error);
+      const errorMsg = error.response?.data?.message || '未知错误';
+      
+      // 特殊处理：如果错误消息包含"已取消报名"，也更新UI状态
+      if (errorMsg.includes('已取消报名')) {
+        message.info('您已取消报名该活动');
+        
+        // 更新当前活动的报名状态
+        setCurrentActivity({
+          ...currentActivity,
+          isRegistered: false,
+          currentParticipants: Math.max(0, currentActivity.currentParticipants - 1)
+        });
+        
+        // 更新活动列表
+        fetchActivities();
+      } else {
+        message.error('取消报名失败: ' + errorMsg);
+      }
     } finally {
       setRegistering(false);
     }
@@ -192,15 +294,26 @@ const LearningActivities = () => {
             <Option value="all">全部类型</Option>
             <Option value="suketuo">素拓活动</Option>
             <Option value="lecture">讲座</Option>
-            <Option value="volunteer">志愿服务</Option>
-            <Option value="competition">竞赛</Option>
+            <Option value="labor">劳动</Option>
             <Option value="other">其他</Option>
           </Select>
         </Col>
-        <Col xs={24} md={4}>
+        <Col xs={12} md={2}>
           <Button type="primary" onClick={fetchActivities}>
             刷新列表
           </Button>
+        </Col>
+        <Col xs={12} md={2}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <input 
+              type="checkbox" 
+              id="showRegistered" 
+              checked={showMyRegistered}
+              onChange={(e) => handleMyRegisteredChange(e.target.checked)}
+              style={{ marginRight: 8 }}
+            />
+            <label htmlFor="showRegistered">已报名</label>
+          </div>
         </Col>
       </Row>
     </Card>
@@ -300,75 +413,89 @@ const LearningActivities = () => {
         <Button key="back" onClick={() => setDetailModalVisible(false)}>
           关闭
         </Button>,
-        currentActivity && currentActivity.status === '未开始' && (
-          <Button 
-            key="register" 
-            type="primary" 
-            loading={registering}
-            onClick={handleRegister}
-            disabled={
-              currentActivity && 
-              (currentActivity.currentParticipants >= currentActivity.capacity)
-            }
-          >
-            {currentActivity && currentActivity.currentParticipants >= currentActivity.capacity ? 
-              '名额已满' : '立即报名'}
-          </Button>
+        currentActivity && (currentActivity.status === '未开始' || currentActivity.status === '进行中') && !loadingDetail && (
+          currentActivity.isRegistered ? (
+            <Button 
+              key="cancel-register" 
+              type="primary" 
+              danger
+              loading={registering}
+              onClick={handleCancelRegistration}
+            >
+              取消报名
+            </Button>
+          ) : (
+            <Button 
+              key="register" 
+              type="primary" 
+              loading={registering}
+              onClick={handleRegister}
+              disabled={
+                currentActivity && 
+                (currentActivity.currentParticipants >= currentActivity.capacity)
+              }
+            >
+              {currentActivity && currentActivity.currentParticipants >= currentActivity.capacity ? 
+                '名额已满' : '立即报名'}
+            </Button>
+          )
         )
       ]}
       width={700}
     >
-      {currentActivity && (
-        <div className="activity-detail">
-          <Title level={4}>{currentActivity.title}</Title>
-          
-          <Row gutter={[16, 16]}>
-            <Col span={24}>
-              <Card title="活动信息">
-                <Paragraph>
-                  <strong>活动状态:</strong> 
-                  <Tag color={
-                    currentActivity.status === '未开始' ? 'blue' : 
-                    currentActivity.status === '进行中' ? 'green' : 
-                    currentActivity.status === '已结束' ? 'gray' : 'red'
-                  }>
-                    {currentActivity.status}
-                  </Tag>
-                </Paragraph>
-                <Paragraph>
-                  <strong>活动时间:</strong> {moment(currentActivity.startDate).format('YYYY-MM-DD HH:mm')} 至 {moment(currentActivity.endDate).format('YYYY-MM-DD HH:mm')}
-                </Paragraph>
-                <Paragraph>
-                  <strong>活动地点:</strong> {currentActivity.location}
-                </Paragraph>
-                <Paragraph>
-                  <strong>参与人数:</strong> {currentActivity.currentParticipants}/{currentActivity.capacity}
-                </Paragraph>
-                <Paragraph>
-                  <strong>活动学分:</strong> {currentActivity.credits}
-                </Paragraph>
-              </Card>
-            </Col>
+      <Spin spinning={loadingDetail}>
+        {currentActivity && (
+          <div className="activity-detail">
+            <Title level={4}>{currentActivity.title}</Title>
             
-            <Col span={24}>
-              <Card title="活动描述">
-                <Paragraph>{currentActivity.description}</Paragraph>
-              </Card>
-            </Col>
-            
-            <Col span={24}>
-              <Card title="报名须知">
-                <ul>
-                  <li>报名成功后，请按时参加活动</li>
-                  <li>活动开始前24小时内可取消报名</li>
-                  <li>活动结束后将自动获得相应学分</li>
-                  <li>如有疑问，请联系活动负责人</li>
-                </ul>
-              </Card>
-            </Col>
-          </Row>
-        </div>
-      )}
+            <Row gutter={[16, 16]}>
+              <Col span={24}>
+                <Card title="活动信息">
+                  <Paragraph>
+                    <strong>活动状态:</strong> 
+                    <Tag color={
+                      currentActivity.status === '未开始' ? 'blue' : 
+                      currentActivity.status === '进行中' ? 'green' : 
+                      currentActivity.status === '已结束' ? 'gray' : 'red'
+                    }>
+                      {currentActivity.status}
+                    </Tag>
+                  </Paragraph>
+                  <Paragraph>
+                    <strong>活动时间:</strong> {moment(currentActivity.startDate).format('YYYY-MM-DD HH:mm')} 至 {moment(currentActivity.endDate).format('YYYY-MM-DD HH:mm')}
+                  </Paragraph>
+                  <Paragraph>
+                    <strong>活动地点:</strong> {currentActivity.location}
+                  </Paragraph>
+                  <Paragraph>
+                    <strong>参与人数:</strong> {currentActivity.currentParticipants}/{currentActivity.capacity}
+                  </Paragraph>
+                  <Paragraph>
+                    <strong>活动学分:</strong> {currentActivity.credits}
+                  </Paragraph>
+                </Card>
+              </Col>
+              
+              <Col span={24}>
+                <Card title="活动描述">
+                  <Paragraph>{currentActivity.description}</Paragraph>
+                </Card>
+              </Col>
+              
+              <Col span={24}>
+                <Card title="报名须知">
+                  <ul>
+                    <li>报名成功后，请按时参加活动</li>
+                    <li>活动开始前24小时内可取消报名</li>
+                    <li>活动结束后将自动获得相应学分</li>
+                    <li>如有疑问，请联系活动负责人</li>
+                  </ul>
+                </Card>
+              </Col>
+            </Row>
+          </div>
+        )}
+      </Spin>
     </Modal>
   );
 

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { auth, optionalAuth } = require('../middlewares/auth');
+const { auth, optionalAuth } = require('../uploads/auth');
 const activitiesController = require('../controllers/activities');
 
 // 获取所有活动 - 使用可选的身份验证

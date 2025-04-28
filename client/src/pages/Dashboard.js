@@ -21,6 +21,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import moment from 'moment';
+import RecommendedActivities from '../components/RecommendedActivities';
 
 const { Title, Text } = Typography;
 
@@ -134,9 +135,12 @@ const Dashboard = () => {
               </div>
             </Card>
 
+            <RecommendedActivities />
+
             <Card 
               title="最近活动" 
               extra={<Link to="/my-activities"><Button type="link" size="small">查看全部</Button></Link>}
+              style={{ marginTop: 16 }}
             >
               <Table 
                 dataSource={recentActivities} 
@@ -208,6 +212,9 @@ const Dashboard = () => {
                 </Button>
                 <Button icon={<BookOutlined />} block>
                   <Link to="/credits/lecture">申请讲座学分</Link>
+                </Button>
+                <Button icon={<TeamOutlined />} block>
+                  <Link to="/credits/labor">申请劳动学分</Link>
                 </Button>
                 <Button icon={<BarChartOutlined />} block>
                   <Link to="/analysis">查看学情分析</Link>

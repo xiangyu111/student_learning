@@ -84,10 +84,11 @@ const ActivitiesManage = () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/activities');
-      const data = response.data || [];
+      console.log('获取到的活动数据:', response.data);
+      const activitiesData = response.data.activities || [];
       // 确保设置的是数组
-      setActivities(Array.isArray(data) ? data : []);
-      setFilteredActivities(Array.isArray(data) ? data : []);
+      setActivities(Array.isArray(activitiesData) ? activitiesData : []);
+      setFilteredActivities(Array.isArray(activitiesData) ? activitiesData : []);
     } catch (error) {
       console.error('获取活动列表失败:', error);
       message.error('获取活动列表失败');

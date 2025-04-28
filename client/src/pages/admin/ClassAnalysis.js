@@ -36,10 +36,24 @@ const ClassAnalysis = () => {
   
   const fetchClasses = async () => {
     try {
-      const response = await axios.get('/api/admin/classes');
-      setClasses(response.data);
-      if (response.data.length > 0) {
-        setSelectedClass(response.data[0].id);
+      const response = await axios.get('/api/users/classes');
+      console.log('获取到的班级数据:', response.data);
+      
+      // 处理不同的数据格式情况
+      let classesList = [];
+      if (Array.isArray(response.data)) {
+        classesList = response.data.map(item => ({
+          id: item.class, // 使用班级名称作为ID
+          name: item.class,
+          department: item.department,
+          major: item.major,
+          grade: item.grade
+        }));
+      }
+      
+      setClasses(classesList);
+      if (classesList.length > 0) {
+        setSelectedClass(classesList[0].id);
       }
     } catch (error) {
       console.error('获取班级列表失败:', error);
@@ -50,13 +64,40 @@ const ClassAnalysis = () => {
   const fetchClassAnalysis = async (classId) => {
     setLoading(true);
     try {
-      const response = await axios.get(`/api/admin/classes/${classId}/analysis`);
-      setSummaryData(response.data.summary);
-      setStudentsData(response.data.students);
-      setCreditTypeDistribution(response.data.creditTypeDistribution);
+      const response = await axios.get(`/api/analysis/classes/${classId}/analysis`);
+      console.log('获取到的班级分析数据:', response.data);
+      
+      // 添加安全处理
+      setSummaryData(response.data.summary || {
+        averageTotalCredits: 0,
+        averageSuketuoCredits: 0,
+        averageLectureCredits: 0,
+        averageLaborCredits: 0,
+        qualifiedCount: 0,
+        totalStudents: 0,
+        qualifiedRate: 0,
+        averageCompletionRate: 0
+      });
+      
+      setStudentsData(response.data.students || []);
+      setCreditTypeDistribution(response.data.creditTypeDistribution || []);
     } catch (error) {
       console.error('获取班级分析数据失败:', error);
       message.error('获取班级分析数据失败');
+      
+      // 出错时设置空数据
+      setSummaryData({
+        averageTotalCredits: 0,
+        averageSuketuoCredits: 0,
+        averageLectureCredits: 0,
+        averageLaborCredits: 0,
+        qualifiedCount: 0,
+        totalStudents: 0,
+        qualifiedRate: 0,
+        averageCompletionRate: 0
+      });
+      setStudentsData([]);
+      setCreditTypeDistribution([]);
     } finally {
       setLoading(false);
     }
@@ -126,8 +167,8 @@ const ClassAnalysis = () => {
         <Col span={6}>
           <Card bordered={false}>
             <Statistic
-              title="志愿服务学分平均值"
-              value={summaryData.averageVolunteerCredits}
+              title="劳动学分平均值"
+              value={summaryData.averageLaborCredits}
               precision={2}
               valueStyle={{ color: '#FFBB28' }}
             />
@@ -169,7 +210,7 @@ const ClassAnalysis = () => {
   };
   
   const renderStudentCreditsChart = () => {
-    if (!studentsData || studentsData.length === 0) {
+    if (!studentsData || !Array.isArray(studentsData) || studentsData.length === 0) {
       return <Empty description="暂无学生学分数据" />;
     }
     
@@ -197,7 +238,7 @@ const ClassAnalysis = () => {
             <Legend />
             <Bar dataKey="suketuoCredits" name="素拓学分" fill="#0088FE" stackId="a" />
             <Bar dataKey="lectureCredits" name="讲座学分" fill="#00C49F" stackId="a" />
-            <Bar dataKey="volunteerCredits" name="志愿服务学分" fill="#FFBB28" stackId="a" />
+            <Bar dataKey="laborCredits" name="劳动学分" fill="#FFBB28" stackId="a" />
           </BarChart>
         </ResponsiveContainer>
       </Card>
@@ -228,10 +269,10 @@ const ClassAnalysis = () => {
       sorter: (a, b) => a.lectureCredits - b.lectureCredits,
     },
     {
-      title: '志愿服务学分',
-      dataIndex: 'volunteerCredits',
-      key: 'volunteerCredits',
-      sorter: (a, b) => a.volunteerCredits - b.volunteerCredits,
+      title: '劳动学分',
+      dataIndex: 'laborCredits',
+      key: 'laborCredits',
+      sorter: (a, b) => a.laborCredits - b.laborCredits,
     },
     {
       title: '总学分',
@@ -261,23 +302,25 @@ const ClassAnalysis = () => {
                   <Col span={8}>
                     <Statistic 
                       title="达标人数" 
-                      value={summaryData.qualifiedCount} 
-                      suffix={`/ ${summaryData.totalStudents}`}
+                      value={summaryData.qualifiedCount || 0} 
+                      suffix={`/ ${summaryData.totalStudents || 0}`}
                     />
                   </Col>
                   <Col span={8}>
                     <Statistic 
                       title="达标率" 
-                      value={summaryData.qualifiedRate * 100} 
+                      value={(summaryData.qualifiedRate || 0) * 100} 
                       precision={1}
                       suffix="%" 
-                      valueStyle={{ color: summaryData.qualifiedRate >= 0.6 ? '#3f8600' : '#cf1322' }}
+                      valueStyle={{ 
+                        color: (summaryData.qualifiedRate || 0) >= 0.6 ? '#3f8600' : '#cf1322'
+                      }}
                     />
                   </Col>
                   <Col span={8}>
                     <Statistic 
                       title="平均达成率" 
-                      value={summaryData.averageCompletionRate * 100} 
+                      value={(summaryData.averageCompletionRate || 0) * 100} 
                       precision={1}
                       suffix="%" 
                     />
@@ -293,7 +336,7 @@ const ClassAnalysis = () => {
         <Card title="学生学分详情">
           <Table
             columns={columns}
-            dataSource={studentsData}
+            dataSource={Array.isArray(studentsData) ? studentsData : []}
             rowKey="studentId"
             pagination={{ pageSize: 10 }}
           />

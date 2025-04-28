@@ -53,6 +53,11 @@ const AppLayout = ({ children }) => {
         label: <Link to="/learning-activities">学习活动记录</Link>,
       },
       {
+        key: '/recommended-activities',
+        icon: <BulbOutlined />,
+        label: <Link to="/recommended-activities">个性化学分推荐</Link>,
+      },
+      {
         key: 'credits',
         icon: <TrophyOutlined />,
         label: '学分管理',
@@ -87,9 +92,9 @@ const AppLayout = ({ children }) => {
         label: <Link to="/reports">报表生成</Link>,
       },
       {
-        key: '/forum',
+        key: '/discussions',
         icon: <MessageOutlined />,
-        label: <Link to="/forum">讨论交流</Link>,
+        label: <Link to="/discussions">讨论交流</Link>,
       },
     ];
 

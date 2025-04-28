@@ -33,6 +33,12 @@ const StudentsManage = () => {
   }, []);
 
   const filterStudents = useCallback(() => {
+    // 确保students是数组
+    if (!Array.isArray(students)) {
+      setFilteredStudents([]);
+      return;
+    }
+    
     let results = [...students];
     
     // 按姓名或学号搜索
@@ -65,15 +71,27 @@ const StudentsManage = () => {
     setLoading(true);
     try {
       const response = await axios.get('/api/users/students');
-      setStudents(response.data);
-      setFilteredStudents(response.data);
+      // 检查并处理response.data是对象还是数组的情况
+      const studentsData = response.data.students || response.data || [];
       
-      // 提取所有院系
-      const depts = Array.from(new Set(response.data.map(student => student.department))).filter(Boolean);
-      setDepartments(depts);
+      setStudents(studentsData);
+      setFilteredStudents(studentsData);
+      
+      // 提取所有院系，确保studentsData是数组
+      if (Array.isArray(studentsData)) {
+        const depts = Array.from(new Set(studentsData.map(student => student.department))).filter(Boolean);
+        setDepartments(depts);
+      } else {
+        console.error('获取到的学生数据不是数组:', studentsData);
+        setDepartments([]);
+      }
     } catch (error) {
       console.error('获取学生列表失败:', error);
       message.error('获取学生列表失败');
+      // 初始化为空数组避免进一步的错误
+      setStudents([]);
+      setFilteredStudents([]);
+      setDepartments([]);
     } finally {
       setLoading(false);
     }
@@ -135,8 +153,8 @@ const StudentsManage = () => {
       年级: student.grade,
       素拓学分: student.suketuoCredits,
       讲座学分: student.lectureCredits,
-      志愿服务: student.volunteerCredits,
-      总学分: student.suketuoCredits + student.lectureCredits + student.volunteerCredits
+      劳动学分: student.laborCredits,
+      总学分: student.suketuoCredits + student.lectureCredits + student.laborCredits
     })));
     
     const workbook = XLSX.utils.book_new();
@@ -214,10 +232,10 @@ const StudentsManage = () => {
       render: (text) => <span style={{ color: '#52c41a' }}>{text}</span>
     },
     {
-      title: '志愿服务',
-      dataIndex: 'volunteerCredits',
-      key: 'volunteerCredits',
-      sorter: (a, b) => a.volunteerCredits - b.volunteerCredits,
+      title: '劳动学分',
+      dataIndex: 'laborCredits',
+      key: 'laborCredits',
+      sorter: (a, b) => a.laborCredits - b.laborCredits,
       render: (text) => <span style={{ color: '#722ed1' }}>{text}</span>
     },
     {
@@ -225,12 +243,12 @@ const StudentsManage = () => {
       key: 'totalCredits',
       render: (_, record) => (
         <Tag color="orange">
-          {record.suketuoCredits + record.lectureCredits + record.volunteerCredits}
+          {record.suketuoCredits + record.lectureCredits + record.laborCredits}
         </Tag>
       ),
       sorter: (a, b) => 
-        (a.suketuoCredits + a.lectureCredits + a.volunteerCredits) - 
-        (b.suketuoCredits + b.lectureCredits + b.volunteerCredits)
+        (a.suketuoCredits + a.lectureCredits + a.laborCredits) - 
+        (b.suketuoCredits + b.lectureCredits + b.laborCredits)
     },
     {
       title: '操作',

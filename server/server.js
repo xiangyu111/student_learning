@@ -28,6 +28,8 @@ const lectureRoutes = require('./routes/lectures');
 const analysisRoutes = require('./routes/analysis');
 const reportRoutes = require('./routes/reports');
 const dashboardRoutes = require('./routes/dashboard');
+const progressRoutes = require('./routes/progress');
+const discussionRoutes = require('./routes/discussions');
 
 // 使用路由
 app.use('/api/auth', authRoutes);
@@ -39,6 +41,8 @@ app.use('/api/lectures', lectureRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/progress', progressRoutes);
+app.use('/api/discussions', discussionRoutes);
 
 // 错误处理中间件
 app.use((err, req, res, next) => {

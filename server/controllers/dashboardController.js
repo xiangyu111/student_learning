@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const Activity = require('../models/Activity');
+const { Activity } = require('../models/Activity');
 const CreditApplication = require('../models/creditApplication');
 const LearningActivity = require('../models/LearningActivity');
 const { Sequelize, Op } = require('sequelize');
@@ -29,10 +29,10 @@ exports.getStudentDashboard = async (req, res) => {
       }
     }) || 0;
     
-    const volunteerCredits = await CreditApplication.sum('creditValue', {
+    const laborCredits = await CreditApplication.sum('creditValue', {
       where: {
         userId,
-        creditType: 'volunteer',
+        creditType: 'labor',
         status: 'approved'
       }
     }) || 0;
@@ -44,7 +44,7 @@ exports.getStudentDashboard = async (req, res) => {
     
     // 计算完成率
     const totalRequired = 20; // 假设总共需要20分
-    const totalEarned = suketuoCredits + lectureCredits + volunteerCredits;
+    const totalEarned = suketuoCredits + lectureCredits + laborCredits;
     const completionRate = Math.min(100, Math.round((totalEarned / totalRequired) * 100));
     
     // 获取待审核申请数
@@ -66,6 +66,10 @@ exports.getStudentDashboard = async (req, res) => {
           as: 'activity',
           attributes: ['id', 'title', 'type', 'startDate', 'endDate']
         }
+      ],
+      attributes: [
+        'id', 'creditType', 'status', 'creditValue', 'created_at', 
+        'description', 'relatedActivityId'
       ]
     });
     
@@ -74,7 +78,7 @@ exports.getStudentDashboard = async (req, res) => {
       const activityInfo = activity.activity || {};
       return {
         id: activity.id,
-        title: activityInfo.title || activity.activityName || '未知活动',
+        title: activityInfo.title || activity.description || '未知活动',
         type: activity.creditType,
         status: activity.status,
         date: moment(activity.created_at).format('YYYY-MM-DD'),
@@ -85,15 +89,20 @@ exports.getStudentDashboard = async (req, res) => {
     // 返回结果
     res.status(200).json({
       statistics: {
-        totalCredits: suketuoCredits + lectureCredits + volunteerCredits,
+        totalCredits: suketuoCredits + lectureCredits + laborCredits,
         suketuoCredits,
         lectureCredits,
-        volunteerCredits,
+        laborCredits,
         activitiesCount,
         completionRate,
         pendingApplications
       },
-      recentActivities: formattedActivities
+      recentActivities: formattedActivities,
+      quickActions: [
+        { type: 'suketuo', label: '申请素拓学分' },
+        { type: 'lecture', label: '申请讲座学分' },
+        { type: 'labor', label: '申请劳动学分' }
+      ]
     });
   } catch (error) {
     console.error('获取学生Dashboard数据失败:', error);
@@ -146,9 +155,9 @@ exports.getTeacherDashboard = async (req, res) => {
       }
     });
     
-    const volunteerApplications = await CreditApplication.count({
+    const laborApplications = await CreditApplication.count({
       where: { 
-        creditType: 'volunteer',
+        creditType: 'labor',
         status: 'pending'
       }
     });
@@ -169,6 +178,10 @@ exports.getTeacherDashboard = async (req, res) => {
           as: 'activity',
           attributes: ['id', 'title', 'type']
         }
+      ],
+      attributes: [
+        'id', 'creditType', 'status', 'creditValue', 'created_at', 
+        'description', 'relatedActivityId'
       ]
     });
     
@@ -181,7 +194,7 @@ exports.getTeacherDashboard = async (req, res) => {
         id: app.id,
         studentName: student.name || '未知学生',
         studentId: student.studentId || '未知学号',
-        activityName: activity.title || app.activityName || '未知活动',
+        activityName: activity.title || app.description || '未知活动',
         type: app.creditType,
         applyDate: moment(app.created_at).format('YYYY-MM-DD'),
         requestedCredits: app.creditValue
@@ -197,7 +210,7 @@ exports.getTeacherDashboard = async (req, res) => {
         averageCredits,
         suketuoApplications,
         lectureApplications,
-        volunteerApplications
+        laborApplications
       },
       pendingApplications: formattedPendingApplications
     });

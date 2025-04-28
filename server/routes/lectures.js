@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { check } = require('express-validator');
-const { auth, isTeacherOrAdmin, isAdmin, isStudent } = require('../middlewares/auth');
+const { auth, isTeacherOrAdmin, isAdmin, isStudent } = require('../uploads/auth');
 const { createUploader, handleUploadError } = require('../utils/fileUpload');
 
 // 由于未提供讲座相关的控制器，这里假设控制器名称和方法名

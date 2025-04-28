@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { auth } = require('../middlewares/auth');
+const { auth } = require('../uploads/auth');
 const dashboardController = require('../controllers/dashboardController');
 
 // 获取学生仪表盘数据

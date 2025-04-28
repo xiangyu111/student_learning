@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { register, login, getMe, updatePassword } = require('../controllers/authController');
-const { auth } = require('../middlewares/auth');
+const { auth } = require('../uploads/auth');
 const { check } = require('express-validator');
 
 // @route   POST /api/auth/register

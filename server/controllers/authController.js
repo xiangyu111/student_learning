@@ -102,7 +102,7 @@ exports.register = async (req, res) => {
         grade: user.grade,
         suketuoCredits: user.suketuoCredits,
         lectureCredits: user.lectureCredits,
-        volunteerCredits: user.volunteerCredits
+        laborCredits: user.laborCredits
       }
     });
   } catch (error) {
@@ -159,7 +159,7 @@ exports.login = async (req, res) => {
         grade: user.grade,
         suketuoCredits: user.suketuoCredits,
         lectureCredits: user.lectureCredits,
-        volunteerCredits: user.volunteerCredits
+        laborCredits: user.laborCredits
       }
     });
   } catch (error) {
@@ -196,7 +196,7 @@ exports.getMe = async (req, res) => {
       phoneNumber: user.phoneNumber,
       suketuoCredits: user.suketuoCredits,
       lectureCredits: user.lectureCredits,
-      volunteerCredits: user.volunteerCredits,
+      laborCredits: user.laborCredits,
       lastLoginAt: user.lastLoginAt
     });
   } catch (error) {

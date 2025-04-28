@@ -21,9 +21,9 @@ exports.getAnalysisData = async (req, res) => {
     
     // 初始化结果对象
     const result = {
-      creditTrend: { months: [], suketuo: [], lecture: [], volunteer: [], labor: [], total: [] },
+      creditTrend: { months: [], suketuo: [], lecture: [], labor: [], total: [] },
       activityParticipation: [],
-      creditDistribution: { suketuo: 0, lecture: 0, volunteer: 0, labor: 0 },
+      creditDistribution: { suketuo: 0, lecture: 0, labor: 0 },
       recentActivities: []
     };
     
@@ -55,6 +55,8 @@ exports.getAnalysisData = async (req, res) => {
       console.error('获取近期活动失败:', error);
     }
     
+    // 添加数据指纹以防止304响应
+    res.setHeader('ETag', Date.now().toString());
     res.status(200).json(result);
   } catch (error) {
     console.error('获取学情分析数据失败:', error);
@@ -73,6 +75,8 @@ exports.getStudentParticipation = async (req, res) => {
     }
     
     const { className, department, startDate, endDate } = req.query;
+    // 获取URL中的班级ID参数，如果是按班级ID查询的情况
+    const classId = req.params.id;
     
     const validStartDate = startDate ? moment(startDate).startOf('day').toDate() : moment().subtract(3, 'months').startOf('day').toDate();
     const validEndDate = endDate ? moment(endDate).endOf('day').toDate() : moment().endOf('day').toDate();
@@ -84,6 +88,12 @@ exports.getStudentParticipation = async (req, res) => {
     
     if (className) whereConditions.class = className;
     if (department) whereConditions.department = department;
+    // 如果是通过classId请求的，则查询该班级
+    if (classId) {
+      // 使用classId直接作为班级名称，因为我们不存在Class模型
+      // 简化这部分代码
+      whereConditions.class = classId;
+    }
     
     // 获取符合条件的学生
     const students = await User.findAll({
@@ -98,7 +108,7 @@ exports.getStudentParticipation = async (req, res) => {
       const suketuoCount = await LearningActivity.count({
         where: {
           userId: student.id,
-          type: 'suketuo',
+          activityType: 'suketuo',
           created_at: {
             [Op.between]: [validStartDate, validEndDate]
           }
@@ -109,18 +119,18 @@ exports.getStudentParticipation = async (req, res) => {
       const lectureCount = await LearningActivity.count({
         where: {
           userId: student.id,
-          type: 'lecture',
+          activityType: 'lecture',
           created_at: {
             [Op.between]: [validStartDate, validEndDate]
           }
         }
       });
       
-      // 获取志愿服务参与次数
-      const volunteerCount = await LearningActivity.count({
+      // 获取劳动活动参与次数
+      const laborCount = await LearningActivity.count({
         where: {
           userId: student.id,
-          type: 'volunteer',
+          activityType: 'labor',
           created_at: {
             [Op.between]: [validStartDate, validEndDate]
           }
@@ -128,9 +138,43 @@ exports.getStudentParticipation = async (req, res) => {
       });
       
       // 获取已获得的学分总数
-      const totalCredits = await CreditApplication.sum('creditValue', {
+      const totalCredits = await CreditApplication.sum('credit_value', {
         where: {
           userId: student.id,
+          status: 'approved',
+          created_at: {
+            [Op.between]: [validStartDate, validEndDate]
+          }
+        }
+      }) || 0;
+      
+      // 获取不同类型的学分
+      const suketuoCredits = await CreditApplication.sum('credit_value', {
+        where: {
+          userId: student.id,
+          creditType: 'suketuo',
+          status: 'approved',
+          created_at: {
+            [Op.between]: [validStartDate, validEndDate]
+          }
+        }
+      }) || 0;
+      
+      const lectureCredits = await CreditApplication.sum('credit_value', {
+        where: {
+          userId: student.id,
+          creditType: 'lecture',
+          status: 'approved',
+          created_at: {
+            [Op.between]: [validStartDate, validEndDate]
+          }
+        }
+      }) || 0;
+      
+      const laborCredits = await CreditApplication.sum('credit_value', {
+        where: {
+          userId: student.id,
+          creditType: 'labor',
           status: 'approved',
           created_at: {
             [Op.between]: [validStartDate, validEndDate]
@@ -142,13 +186,98 @@ exports.getStudentParticipation = async (req, res) => {
         ...student.dataValues,
         suketuoCount,
         lectureCount,
-        volunteerCount,
-        totalActivities: suketuoCount + lectureCount + volunteerCount,
+        laborCount,
+        suketuoCredits,
+        lectureCredits,
+        laborCredits,
+        totalActivities: suketuoCount + lectureCount + laborCount,
         totalCredits
       });
     }
     
-    res.status(200).json(results);
+    // 如果是班级详情请求，需要计算统计数据并格式化返回
+    if (classId) {
+      // 计算学分平均值
+      const averageTotalCredits = results.reduce((sum, student) => sum + student.totalCredits, 0) / (results.length || 1);
+      const averageSuketuoCredits = results.reduce((sum, student) => sum + student.suketuoCredits, 0) / (results.length || 1);
+      const averageLectureCredits = results.reduce((sum, student) => sum + student.lectureCredits, 0) / (results.length || 1);
+      const averageLaborCredits = results.reduce((sum, student) => sum + student.laborCredits, 0) / (results.length || 1);
+      
+      // 学分类型分布
+      const totalSuketuoCredits = results.reduce((sum, student) => sum + student.suketuoCredits, 0);
+      const totalLectureCredits = results.reduce((sum, student) => sum + student.lectureCredits, 0);
+      const totalLaborCredits = results.reduce((sum, student) => sum + student.laborCredits, 0);
+      
+      const creditTypeDistribution = [
+        { name: '素拓学分', value: totalSuketuoCredits },
+        { name: '讲座学分', value: totalLectureCredits },
+        { name: '劳动学分', value: totalLaborCredits }
+      ];
+      
+      // 格式化学生数据
+      const formattedStudents = results.map(student => ({
+        id: student.id,
+        name: student.name,
+        studentId: student.studentId,
+        department: student.department,
+        suketuoCredits: student.suketuoCredits,
+        lectureCredits: student.lectureCredits,
+        laborCredits: student.laborCredits,
+        totalCredits: student.totalCredits
+      }));
+      
+      // 计算学分达成率数据
+      // 假设每个学生需要获得的目标学分
+      const targetCredits = 8; // 例如总共需要8个学分
+      const suketuoTarget = 3;  // 需要3个素拓学分
+      const lectureTarget = 3;  // 需要3个讲座学分
+      const laborTarget = 2;    // 需要2个劳动学分
+      
+      // 计算达标人数 (总学分达到目标)
+      const qualifiedCount = formattedStudents.filter(student => 
+        student.totalCredits >= targetCredits
+      ).length;
+      
+      // 总学生数
+      const totalStudents = formattedStudents.length;
+      
+      // 达标率
+      const qualifiedRate = totalStudents > 0 ? qualifiedCount / totalStudents : 0;
+      
+      // 计算平均达成率 (每个学生达成的比例的平均值)
+      const studentCompletionRates = formattedStudents.map(student => {
+        const suketuoCompletion = Math.min(student.suketuoCredits / suketuoTarget, 1);
+        const lectureCompletion = Math.min(student.lectureCredits / lectureTarget, 1);
+        const laborCompletion = Math.min(student.laborCredits / laborTarget, 1);
+        const totalCompletion = Math.min(student.totalCredits / targetCredits, 1);
+        
+        // 综合达成率，可以考虑不同类型学分的权重
+        return totalCompletion;
+      });
+      
+      const averageCompletionRate = studentCompletionRates.length > 0 ? 
+        studentCompletionRates.reduce((sum, rate) => sum + rate, 0) / studentCompletionRates.length : 0;
+      
+      return res.status(200).json({
+        summary: {
+          averageTotalCredits,
+          averageSuketuoCredits,
+          averageLectureCredits,
+          averageLaborCredits,
+          qualifiedCount,
+          totalStudents,
+          qualifiedRate,
+          averageCompletionRate
+        },
+        creditTypeDistribution,
+        students: formattedStudents || []
+      });
+    }
+    
+    // 修改此处，确保返回一个包含students属性的对象，而不是直接返回results数组
+    res.status(200).json({
+      students: results || []
+    });
   } catch (error) {
     console.error('获取学生参与统计数据失败:', error);
     res.status(500).json({ message: '服务器错误' });
@@ -236,6 +365,10 @@ exports.getCreditAccumulation = async (req, res) => {
       status: 'approved',
       created_at: {
         [Op.between]: [validStartDate, validEndDate]
+      },
+      // 只查询特定类型的学分
+      creditType: {
+        [Op.in]: ['suketuo', 'lecture', 'labor', 'volunteer']
       }
     };
     
@@ -267,7 +400,7 @@ exports.getCreditAccumulation = async (req, res) => {
     const creditData = await CreditApplication.findAll({
       attributes: [
         [Sequelize.fn('DATE_FORMAT', Sequelize.col('created_at'), '%Y-%m'), 'month'],
-        [Sequelize.fn('SUM', Sequelize.col('creditValue')), 'totalCredits'],
+        [Sequelize.fn('SUM', Sequelize.col('credit_value')), 'totalCredits'],
         'creditType'
       ],
       where: whereConditions,
@@ -287,7 +420,6 @@ exports.getCreditAccumulation = async (req, res) => {
       months,
       suketuo: Array(months.length).fill(0),
       lecture: Array(months.length).fill(0),
-      volunteer: Array(months.length).fill(0),
       labor: Array(months.length).fill(0),
       total: Array(months.length).fill(0)
     };
@@ -297,7 +429,7 @@ exports.getCreditAccumulation = async (req, res) => {
       'suketuo': 'suketuo',
       'lecture': 'lecture',
       'labor': 'labor',
-      'volunteer': 'volunteer'
+      'volunteer': 'labor' // 为了兼容，把志愿服务也映射为劳动
     };
     
     creditData.forEach(item => {
@@ -305,14 +437,9 @@ exports.getCreditAccumulation = async (req, res) => {
       const creditType = item.creditType;
       const credits = parseFloat(item.dataValues.totalCredits);
       
-      if (monthIndex !== -1 && !isNaN(credits)) {
+      if (monthIndex !== -1 && !isNaN(credits) && typeMapping[creditType]) {
         // 使用类型映射确保我们访问有效的属性
-        const resultKey = typeMapping[creditType] || 'other';
-        
-        // 如果resultKey不在result中，可能需要初始化它
-        if (!result[resultKey]) {
-          result[resultKey] = Array(months.length).fill(0);
-        }
+        const resultKey = typeMapping[creditType];
         
         result[resultKey][monthIndex] = credits;
         result.total[monthIndex] += credits;
@@ -343,7 +470,6 @@ async function getCreditTrend(userId, startDate, endDate) {
     months,
     suketuo: Array(months.length).fill(0),
     lecture: Array(months.length).fill(0),
-    volunteer: Array(months.length).fill(0),
     labor: Array(months.length).fill(0),
     total: Array(months.length).fill(0)
   };
@@ -353,14 +479,14 @@ async function getCreditTrend(userId, startDate, endDate) {
     'suketuo': 'suketuo',
     'lecture': 'lecture',
     'labor': 'labor',
-    'volunteer': 'volunteer'
+    'volunteer': 'labor' // 为了兼容，把志愿服务也映射为劳动
   };
   
-  // 查询学分数据
+  // 查询学分数据 - 只包含素拓、讲座和劳动学分
   const creditData = await CreditApplication.findAll({
     attributes: [
       [Sequelize.fn('DATE_FORMAT', Sequelize.col('created_at'), '%Y-%m'), 'month'],
-      [Sequelize.fn('SUM', Sequelize.col('creditValue')), 'totalCredits'],
+      [Sequelize.fn('SUM', Sequelize.col('credit_value')), 'totalCredits'],
       'creditType'
     ],
     where: {
@@ -368,6 +494,9 @@ async function getCreditTrend(userId, startDate, endDate) {
       status: 'approved',
       created_at: {
         [Op.between]: [startDate, endDate]
+      },
+      creditType: {
+        [Op.in]: ['suketuo', 'lecture', 'labor', 'volunteer']
       }
     },
     group: [
@@ -382,14 +511,9 @@ async function getCreditTrend(userId, startDate, endDate) {
     const creditType = item.creditType;
     const credits = parseFloat(item.dataValues.totalCredits);
     
-    if (monthIndex !== -1 && !isNaN(credits)) {
+    if (monthIndex !== -1 && !isNaN(credits) && typeMapping[creditType]) {
       // 使用类型映射确保我们访问有效的属性
-      const resultKey = typeMapping[creditType] || 'other';
-      
-      // 如果resultKey不在result中，可能需要初始化它
-      if (!result[resultKey]) {
-        result[resultKey] = Array(months.length).fill(0);
-      }
+      const resultKey = typeMapping[creditType];
       
       result[resultKey][monthIndex] = credits;
       result.total[monthIndex] += credits;
@@ -402,10 +526,10 @@ async function getCreditTrend(userId, startDate, endDate) {
 // 辅助函数: 获取活动参与分布
 async function getActivityParticipation(userId, startDate, endDate) {
   try {
-    // 查询用户参与的各类活动数量 - 修改type为activityType
+    // 查询用户参与的各类活动数量 - 确保使用正确的字段名
     const activities = await LearningActivity.findAll({
       attributes: [
-        'activityType',
+        'activity_type', // 使用下划线命名法
         [Sequelize.fn('COUNT', Sequelize.col('id')), 'count']
       ],
       where: {
@@ -414,44 +538,49 @@ async function getActivityParticipation(userId, startDate, endDate) {
           [Op.between]: [startDate, endDate]
         }
       },
-      group: ['activityType']
+      group: ['activity_type']
     });
-    
-    // 定义活动类型映射
-    const typeMapping = {
-      suketuo: '素拓活动',
-      lecture: '讲座',
-      volunteer: '志愿服务',
-      labor: '劳动',
-      competition: '竞赛',
-      other: '其他'
-    };
     
     // 如果没有找到数据，返回一个标准的占位数据
     if (!activities || activities.length === 0) {
       return [
         { name: '素拓活动', value: 0 },
         { name: '讲座', value: 0 },
-        { name: '志愿服务', value: 0 },
         { name: '劳动', value: 0 }
       ];
     }
     
-    // 格式化结果 - 修改type为activityType
-    return activities.map(activity => {
-      const activityTypeName = activity.activityType ? activity.activityType.toLowerCase() : 'other';
+    // 定义活动类型映射
+    const typeMapping = {
+      suketuo: '素拓活动',
+      lecture: '讲座',
+      labor: '劳动',
+      volunteer: '劳动', // 为了兼容，把志愿服务也映射为劳动
+      competition: '竞赛',
+      other: '其他'
+    };
+    
+    // 格式化结果 - 使用activity_type
+    const formattedResults = activities.map(activity => {
+      const activityTypeName = activity.activity_type ? activity.activity_type.toLowerCase() : 'other';
       return {
-        name: typeMapping[activityTypeName] || activity.activityType || '其他',
+        name: typeMapping[activityTypeName] || activity.activity_type || '其他',
         value: parseInt(activity.dataValues.count || 0)
       };
     });
+    
+    // 过滤掉非素拓活动、讲座和劳动的项目
+    return formattedResults.filter(item => 
+      item.name === '素拓活动' || 
+      item.name === '讲座' || 
+      item.name === '劳动'
+    );
   } catch (error) {
     console.error('活动参与分布数据获取失败:', error);
     // 返回一个标准的占位数据
     return [
       { name: '素拓活动', value: 0 },
       { name: '讲座', value: 0 },
-      { name: '志愿服务', value: 0 },
       { name: '劳动', value: 0 }
     ];
   }
@@ -460,7 +589,7 @@ async function getActivityParticipation(userId, startDate, endDate) {
 // 辅助函数: 获取学分分布
 async function getCreditDistribution(userId) {
   // 查询已获批的不同类型学分总和
-  const suketuo = await CreditApplication.sum('creditValue', {
+  const suketuo = await CreditApplication.sum('credit_value', {
     where: {
       userId,
       creditType: 'suketuo',
@@ -468,7 +597,7 @@ async function getCreditDistribution(userId) {
     }
   }) || 0;
   
-  const lecture = await CreditApplication.sum('creditValue', {
+  const lecture = await CreditApplication.sum('credit_value', {
     where: {
       userId,
       creditType: 'lecture',
@@ -476,15 +605,7 @@ async function getCreditDistribution(userId) {
     }
   }) || 0;
   
-  const volunteer = await CreditApplication.sum('creditValue', {
-    where: {
-      userId,
-      creditType: 'volunteer',
-      status: 'approved'
-    }
-  }) || 0;
-  
-  const labor = await CreditApplication.sum('creditValue', {
+  const labor = await CreditApplication.sum('credit_value', {
     where: {
       userId,
       creditType: 'labor',
@@ -495,7 +616,6 @@ async function getCreditDistribution(userId) {
   return {
     suketuo,
     lecture,
-    volunteer,
     labor
   };
 }
@@ -504,6 +624,7 @@ async function getCreditDistribution(userId) {
 async function getRecentActivities(userId, startDate, endDate) {
   // 查询用户参与的活动
   try {
+    // 查询用户的学习活动
     const activities = await LearningActivity.findAll({
       where: {
         userId,
@@ -519,21 +640,48 @@ async function getRecentActivities(userId, startDate, endDate) {
     const typeMapping = {
       suketuo: '素拓',
       lecture: '讲座',
-      volunteer: '志愿服务',
       labor: '劳动',
+      volunteer: '劳动', // 为了兼容，把志愿服务也映射为劳动
       competition: '竞赛',
       other: '其他'
     };
     
-    // 格式化结果
+    // 查询学分申请记录，以关联学分数据
+    const creditApplications = await CreditApplication.findAll({
+      where: {
+        userId,
+        status: 'approved',
+        created_at: {
+          [Op.between]: [startDate, endDate]
+        }
+      },
+      attributes: ['id', 'related_activity_id', 'credit_value', 'status', 'created_at']
+    });
+    
+    // 创建学分申请的映射，以便快速查找
+    const creditMap = {};
+    for (const credit of creditApplications) {
+      creditMap[credit.related_activity_id] = {
+        creditValue: credit.credit_value,
+        status: credit.status
+      };
+    }
+    
+    // 格式化结果，添加学分信息
     return activities.map(activity => {
+      // 获取活动对应的学分信息
+      const creditInfo = creditMap[activity.id] || { creditValue: 0, status: '未申请' };
+      
+      // 确定活动类型
+      let activityType = activity.activityType || activity.activity_type || 'other';
+      
       return {
         id: activity.id,
-        title: activity.activityName || '未知活动',
-        type: typeMapping[activity.activityType] || activity.activityType || '未知类型',
+        title: activity.activityName || activity.activity_name || '未知活动',
+        type: typeMapping[activityType.toLowerCase()] || activityType || '未知类型',
         date: moment(activity.created_at).format('YYYY-MM-DD'),
-        credits: 0, // 没有关联的Activity，无法获取确切学分
-        status: '已完成' // 默认状态
+        credits: creditInfo.creditValue || 0,
+        status: creditInfo.status === 'approved' ? '已获得' : '未获得'
       };
     });
   } catch (error) {

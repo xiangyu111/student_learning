@@ -21,14 +21,14 @@ const Analysis = () => {
       months: [],
       suketuo: [],
       lecture: [],
-      volunteer: [],
+      labor: [],
       total: []
     },
     activityParticipation: [],
     creditDistribution: {
       suketuo: 0,
       lecture: 0,
-      volunteer: 0
+      labor: 0
     },
     recentActivities: []
   });
@@ -42,15 +42,40 @@ const Analysis = () => {
     
     setLoading(true);
     try {
+      // 确保日期是有效的
+      const start = dateRange[0] || moment().subtract(6, 'months');
+      const end = dateRange[1] || moment();
+      
+      // 使用随机时间戳确保每次请求都是唯一的
+      const timestamp = new Date().getTime();
+      
       const response = await axios.get('/api/analysis', {
         params: {
-          startDate: dateRange[0]?.format('YYYY-MM-DD'),
-          endDate: dateRange[1]?.format('YYYY-MM-DD')
+          startDate: start.format('YYYY-MM-DD'),
+          endDate: end.format('YYYY-MM-DD'),
+          _t: timestamp // 添加时间戳防止缓存
+        },
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'If-None-Match': '',
+          'If-Modified-Since': '0'
         }
       });
       
       if (response.data) {
-        setAnalysisData(response.data);
+        console.log('获取到学情分析数据:', response.data);
+        
+        // 确保数据中只包含素拓、讲座和劳动
+        const sanitizedData = {
+          ...response.data,
+          activityParticipation: response.data.activityParticipation.filter(item => 
+            item.name === '素拓活动' || item.name === '讲座' || item.name === '劳动'
+          )
+        };
+        
+        setAnalysisData(sanitizedData);
       }
     } catch (error) {
       console.error('获取分析数据失败:', error);
@@ -62,7 +87,7 @@ const Analysis = () => {
 
   // 学分趋势图配置
   const getCreditTrendOption = () => {
-    const { months, suketuo, lecture, volunteer, total } = analysisData.creditTrend;
+    const { months, suketuo, lecture, labor, total } = analysisData.creditTrend;
     
     return {
       title: {
@@ -76,7 +101,7 @@ const Analysis = () => {
         }
       },
       legend: {
-        data: ['素拓学分', '讲座学分', '志愿服务', '总学分'],
+        data: ['素拓学分', '讲座学分', '劳动学分', '总学分'],
         bottom: 0
       },
       grid: {
@@ -114,13 +139,13 @@ const Analysis = () => {
           data: lecture || []
         },
         {
-          name: '志愿服务',
+          name: '劳动学分',
           type: 'bar',
           stack: 'credits',
           emphasis: {
             focus: 'series'
           },
-          data: volunteer || []
+          data: labor || []
         },
         {
           name: '总学分',
@@ -136,6 +161,18 @@ const Analysis = () => {
 
   // 活动参与分布图配置
   const getActivityDistributionOption = () => {
+    // 确保只显示素拓活动、讲座和劳动
+    const filteredData = analysisData.activityParticipation.filter(item => 
+      item.name === '素拓活动' || item.name === '讲座' || item.name === '劳动'
+    );
+    
+    // 定义颜色映射，保持一致的颜色显示
+    const colorMap = {
+      '素拓活动': '#5470c6',
+      '讲座': '#91cc75',
+      '劳动': '#fac858'
+    };
+    
     return {
       title: {
         text: '活动参与分布',
@@ -148,7 +185,7 @@ const Analysis = () => {
       legend: {
         orient: 'vertical',
         left: 10,
-        data: analysisData.activityParticipation.map(item => item.name)
+        data: filteredData.map(item => item.name)
       },
       series: [
         {
@@ -175,9 +212,12 @@ const Analysis = () => {
           labelLine: {
             show: false
           },
-          data: analysisData.activityParticipation.map(item => ({
+          data: filteredData.map(item => ({
             name: item.name,
-            value: item.value
+            value: item.value,
+            itemStyle: {
+              color: colorMap[item.name]
+            }
           }))
         }
       ]
@@ -186,8 +226,8 @@ const Analysis = () => {
 
   // 学分分布图配置
   const getCreditDistributionOption = () => {
-    const { suketuo, lecture, volunteer } = analysisData.creditDistribution;
-    const total = suketuo + lecture + volunteer;
+    const { suketuo, lecture, labor } = analysisData.creditDistribution;
+    const total = suketuo + lecture + labor;
     
     return {
       title: {
@@ -201,7 +241,7 @@ const Analysis = () => {
       legend: {
         orient: 'vertical',
         left: 10,
-        data: ['素拓学分', '讲座学分', '志愿服务']
+        data: ['素拓学分', '讲座学分', '劳动学分']
       },
       series: [
         {
@@ -229,9 +269,9 @@ const Analysis = () => {
             show: false
           },
           data: [
-            { value: suketuo, name: '素拓学分', percent: ((suketuo / total) * 100).toFixed(1) + '%' },
-            { value: lecture, name: '讲座学分', percent: ((lecture / total) * 100).toFixed(1) + '%' },
-            { value: volunteer, name: '志愿服务', percent: ((volunteer / total) * 100).toFixed(1) + '%' }
+            { value: suketuo, name: '素拓学分', percent: total > 0 ? ((suketuo / total) * 100).toFixed(1) + '%' : '0%' },
+            { value: lecture, name: '讲座学分', percent: total > 0 ? ((lecture / total) * 100).toFixed(1) + '%' : '0%' },
+            { value: labor, name: '劳动学分', percent: total > 0 ? ((labor / total) * 100).toFixed(1) + '%' : '0%' }
           ]
         }
       ]

@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const { validationResult } = require('express-validator');
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
+const { sequelize } = require('../config/db');
 
 // @desc    获取用户资料
 // @route   GET /api/users/:id
@@ -321,6 +322,95 @@ exports.getGrades = async (req, res) => {
     res.json(grades.map(item => item.grade));
   } catch (error) {
     console.error('获取年级列表错误:', error);
+    res.status(500).json({ message: '服务器错误' });
+  }
+};
+
+// @desc    获取个性化学习活动推荐
+// @route   GET /api/users/recommended-activities
+// @access  Private (Student)
+exports.getRecommendedActivities = async (req, res) => {
+  try {
+    // 获取当前用户ID
+    const userId = req.user.id;
+    
+    // 查找用户
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    
+    // 判断用户学分情况
+    const { suketuoCredits, lectureCredits, laborCredits } = user;
+    
+    // 获取所有未结束的活动
+    const { Activity } = require('../models/Activity');
+    const currentDate = new Date();
+    
+    const activities = await Activity.findAll({
+      where: {
+        endDate: { [Op.gt]: currentDate },
+        status: { [Op.ne]: '已取消' }
+      },
+      limit: 10,
+      order: [['startDate', 'ASC']]
+    });
+    
+    // 根据学分情况进行推荐
+    let recommendedActivities = [];
+    
+    // 计算最低学分类型
+    const creditTypes = [
+      { type: 'suketuo', value: suketuoCredits, name: '素拓学分' },
+      { type: 'lecture', value: lectureCredits, name: '讲座学分' },
+      { type: 'volunteer', value: laborCredits, name: '劳动学分' }
+    ];
+    
+    // 按学分值从小到大排序
+    creditTypes.sort((a, b) => a.value - b.value);
+    
+    // 为每个活动添加推荐理由
+    activities.forEach(activity => {
+      let recommendation = {
+        activity,
+        reason: '',
+        priority: 0
+      };
+      
+      // 根据活动类型和用户学分情况计算优先级
+      if (activity.type === creditTypes[0].type) {
+        recommendation.reason = `您的${creditTypes[0].name}较少，参与此活动可获得${activity.credits}学分`;
+        recommendation.priority = 3; // 最高优先级
+      } else if (activity.type === creditTypes[1].type) {
+        recommendation.reason = `您的${creditTypes[1].name}可以提高，参与此活动可获得${activity.credits}学分`;
+        recommendation.priority = 2; // 中等优先级
+      } else if (activity.type === creditTypes[2].type) {
+        recommendation.reason = `参与此活动可获得${activity.credits}学分`;
+        recommendation.priority = 1; // 正常优先级
+      } else {
+        recommendation.reason = `丰富您的课外活动经历`;
+        recommendation.priority = 0; // 最低优先级
+      }
+      
+      recommendedActivities.push(recommendation);
+    });
+    
+    // 按照优先级排序推荐活动
+    recommendedActivities.sort((a, b) => b.priority - a.priority);
+    
+    res.json({
+      credits: {
+        suketuo: suketuoCredits,
+        lecture: lectureCredits,
+        labor: laborCredits
+      },
+      lowestCreditType: creditTypes[0].name,
+      recommendedActivities
+    });
+    
+  } catch (error) {
+    console.error('获取推荐活动错误:', error);
     res.status(500).json({ message: '服务器错误' });
   }
 }; 

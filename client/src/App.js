@@ -16,6 +16,8 @@ import Settings from './pages/Settings';
 
 // 学习活动页面
 import LearningActivities from './pages/learning/LearningActivities';
+import ProgressTracking from './pages/learning/ProgressTracking';
+import RecommendedActivitiesPage from './pages/RecommendedActivitiesPage';
 
 // 学分管理页面
 import SuketuoCredits from './pages/credits/SuketuoCredits';
@@ -32,6 +34,9 @@ import SuketuoReview from './pages/admin/SuketuoReview';
 import LectureReview from './pages/admin/LectureReview';
 import LaborReview from './pages/admin/LaborReview';
 import ClassAnalysis from './pages/admin/ClassAnalysis';
+
+// 讨论交流页面
+import { DiscussionList, DiscussionDetail, CreateDiscussion } from './pages/discussions';
 
 // 权限保护的路由组件
 const ProtectedRoute = ({ element, requiredRole }) => {
@@ -95,11 +100,44 @@ function App() {
               } />
             } />
             
+            {/* 讨论交流路由 */}
+            <Route path="/discussions" element={
+              <ProtectedRoute element={
+                <AppLayout>
+                  <DiscussionList />
+                </AppLayout>
+              } />
+            } />
+            
+            <Route path="/discussions/create" element={
+              <ProtectedRoute element={
+                <AppLayout>
+                  <CreateDiscussion />
+                </AppLayout>
+              } />
+            } />
+            
+            <Route path="/discussions/:id" element={
+              <ProtectedRoute element={
+                <AppLayout>
+                  <DiscussionDetail />
+                </AppLayout>
+              } />
+            } />
+            
             {/* 学生可访问的路由 */}
             <Route path="/learning-activities" element={
               <ProtectedRoute element={
                 <AppLayout>
                   <LearningActivities />
+                </AppLayout>
+              } requiredRole="student" />
+            } />
+            
+            <Route path="/progress" element={
+              <ProtectedRoute element={
+                <AppLayout>
+                  <ProgressTracking />
                 </AppLayout>
               } requiredRole="student" />
             } />
@@ -132,6 +170,14 @@ function App() {
               <ProtectedRoute element={
                 <AppLayout>
                   <Analysis />
+                </AppLayout>
+              } requiredRole="student" />
+            } />
+            
+            <Route path="/recommended-activities" element={
+              <ProtectedRoute element={
+                <AppLayout>
+                  <RecommendedActivitiesPage />
                 </AppLayout>
               } requiredRole="student" />
             } />

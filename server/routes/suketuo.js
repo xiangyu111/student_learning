@@ -12,7 +12,7 @@ const {
   reviewApplication,
   getActivityTypes
 } = require('../controllers/suketuoController');
-const { auth, isTeacherOrAdmin, isAdmin, isStudent } = require('../middlewares/auth');
+const { auth, isTeacherOrAdmin, isAdmin, isStudent } = require('../uploads/auth');
 const { check } = require('express-validator');
 const { createUploader, handleUploadError } = require('../utils/fileUpload');
 
